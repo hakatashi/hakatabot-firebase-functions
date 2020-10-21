@@ -1,3 +1,3 @@
 module.exports = {
-  extends: "@hakatashi/eslint-config/typescript"
+	extends: '@hakatashi/eslint-config/typescript',
 };
