@@ -1,3 +1,5 @@
+/* eslint-disable import/prefer-default-export */
+
 import {https, logger} from 'firebase-functions';
 
 // Start writing Firebase Functions
