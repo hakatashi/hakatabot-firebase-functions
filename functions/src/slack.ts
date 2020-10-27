@@ -87,10 +87,8 @@ const getTwitterAccount = (reaction: string) => {
 };
 
 eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
-	logger.info(event);
 	if (event.user === HAKATASHI_ID && event.item_user === HAKATASHI_ID && event.item.type === 'message') {
 		const account = getTwitterAccount(event.reaction);
-		logger.info(event.reaction, account);
 
 		if (account === null) {
 			return;
@@ -103,16 +101,13 @@ eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
 			inclusive: true,
 			limit: 1,
 		}) as any;
-		logger.info(messages);
 
 		if (!messages || messages.length !== 1) {
 			return;
 		}
 
 		const message = messages[0]!;
-		logger.info(message);
 		const data = await tweet(account, message.text);
-		logger.info(data);
 
 		logger.info(`Tweeted ${JSON.stringify(message.text)} with tweet ID ${data.id_str}`);
 	}
