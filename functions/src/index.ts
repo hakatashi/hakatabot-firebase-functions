@@ -3,6 +3,8 @@
 import {https, logger} from 'firebase-functions';
 import {google} from 'googleapis';
 
+export * from './slack';
+
 const fitness = google.fitness('v1');
 
 export const helloWorld = https.onRequest(async (request, response) => {
