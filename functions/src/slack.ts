@@ -68,7 +68,7 @@ const tweet = (account: string, text: string) => {
 };
 
 const getTwitterAccount = (reaction: string) => {
-	if (reaction === 'white_large_square') {
+	if (reaction === 'white_large_square' || reaction === 'red_large_square') {
 		return 'hakatashi';
 	}
 	if (reaction === 'a') {
