@@ -70,9 +70,12 @@ eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
 		}
 
 		const message = messages[0]!;
-		const data = await twitter(account, 'POST', 'statuses/update', {status: message.text});
-
-		logger.info(`Tweeted ${JSON.stringify(message.text)} with tweet ID ${data.id_str}`);
+		try {
+			const data = await twitter(account, 'POST', 'statuses/update', {status: message.text});
+			logger.info(`Tweeted ${JSON.stringify(message.text)} with tweet ID ${data.id_str}`);
+		} catch (error) {
+			logger.error('Tweet errored', error);
+		}
 	}
 });
 

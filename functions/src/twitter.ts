@@ -40,7 +40,7 @@ export default (account: string, method: 'GET' | 'POST', endpoint: string, param
 			);
 		} else {
 			oauth.post(
-				`https://${domain}.twitter.com/1.1/${endpoint}.json`,
+				`https://${domain}/1.1/${endpoint}.json`,
 				keys.access_token,
 				keys.access_token_secret,
 				parameters,
