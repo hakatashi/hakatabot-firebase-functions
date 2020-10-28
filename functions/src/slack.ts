@@ -31,7 +31,7 @@ const config = getConfig();
 const slack = new WebClient(config.slack.token);
 const eventAdapter = createEventAdapter(config.slack.signing_secret);
 
-const tweet = (account: string, text: string) => {
+const twitter = (account: string, method: 'GET' | 'POST', endpoint: string, parameters: {[key: string]: string}) => {
 	const keys = config.twitter.tokens[account.toLowerCase()];
 	if (typeof keys !== 'object') {
 		throw new Error(`token not found: ${account}`);
@@ -47,23 +47,42 @@ const tweet = (account: string, text: string) => {
 		'HMAC-SHA1',
 	);
 
+	const domain = `${endpoint.startsWith('media/') ? 'upload' : 'api'}.twitter.com`;
+
 	return new Promise<any>((resolve, reject) => {
-		oauth.post(
-			`https://api.twitter.com/1.1/statuses/update.json?${qs.stringify({status: text})}`,
-			keys.access_token,
-			keys.access_token_secret,
-			'',
-			'application/x-www-form-urlencoded',
-			(error, d) => {
-				if (error) {
-					reject(error);
-				} else if (d) {
-					resolve(JSON.parse(d.toString()));
-				} else {
-					reject(new Error('No data'));
-				}
-			},
-		);
+		if (method === 'GET') {
+			oauth.get(
+				`https://${domain}/1.1/${endpoint}.json?${qs.stringify(parameters)}`,
+				keys.access_token,
+				keys.access_token_secret,
+				(error, d) => {
+					if (error) {
+						reject(error);
+					} else if (d) {
+						resolve(JSON.parse(d.toString()));
+					} else {
+						reject(new Error('No data'));
+					}
+				},
+			);
+		} else {
+			oauth.post(
+				`https://${domain}.twitter.com/1.1/${endpoint}.json`,
+				keys.access_token,
+				keys.access_token_secret,
+				parameters,
+				'application/x-www-form-urlencoded',
+				(error, d) => {
+					if (error) {
+						reject(error);
+					} else if (d) {
+						resolve(JSON.parse(d.toString()));
+					} else {
+						reject(new Error('No data'));
+					}
+				},
+			);
+		}
 	});
 };
 
@@ -107,7 +126,7 @@ eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
 		}
 
 		const message = messages[0]!;
-		const data = await tweet(account, message.text);
+		const data = await twitter(account, 'POST', 'statuses/update', {status: message.text});
 
 		logger.info(`Tweeted ${JSON.stringify(message.text)} with tweet ID ${data.id_str}`);
 	}
