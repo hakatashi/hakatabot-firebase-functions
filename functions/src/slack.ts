@@ -45,7 +45,7 @@ const slack = new WebClient(config.slack.token);
 const eventAdapter = createEventAdapter(config.slack.signing_secret, {waitForResponse: true});
 
 const getTwitterAccount = (reaction: string) => {
-	if (reaction === 'red_large_satos_square') {
+	if (reaction === 'red_large_square_satos') {
 		return 'satos_sandbox';
 	}
 	if (reaction === 'white_large_square' || reaction === 'red_large_square') {
