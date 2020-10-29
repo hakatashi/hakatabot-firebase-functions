@@ -1,5 +1,6 @@
 import {createEventAdapter} from '@slack/events-api';
 import {WebClient} from '@slack/web-api';
+import download from 'download';
 import {https, logger, config as getConfig} from 'firebase-functions';
 import {HAKATASHI_ID} from './const';
 import twitter from './twitter';
@@ -17,12 +18,25 @@ interface ReactionAddedEvent {
 	event_ts: string,
 }
 
+interface Attachment {
+	original_url?: string,
+	image_url?: string,
+	service_name?: string,
+}
+
+interface File {
+	url_private: string,
+	mimetype: string,
+}
+
 interface Message {
 	type: string,
 	subtype: string,
 	text: string,
 	ts: string,
 	username: string,
+	attachments?: Attachment[],
+	files?: File[],
 }
 
 const config = getConfig();
@@ -49,6 +63,13 @@ const getTwitterAccount = (reaction: string) => {
 	return null;
 };
 
+const unescapeSlackComponent = (text: string) => (
+	text
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&amp;/g, '&')
+);
+
 eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
 	if (event.user === HAKATASHI_ID && event.item_user === HAKATASHI_ID && event.item.type === 'message') {
 		const account = getTwitterAccount(event.reaction);
@@ -70,9 +91,62 @@ eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
 		}
 
 		const message = messages[0]!;
+
+		const urls = [];
+
+		for (const file of message.files ?? []) {
+			if (file.mimetype.startsWith('image/')) {
+				urls.push(file.url_private);
+			}
+		}
+
+		const usedUrls = new Set<string>();
+		for (const attachment of message.attachments ?? []) {
+			if (attachment.image_url && attachment.service_name === 'Gyazo') {
+				urls.push(attachment.image_url);
+				if (attachment.original_url) {
+					usedUrls.add(attachment.original_url);
+				}
+			}
+		}
+
+		const mediaIds = [];
+		for (const url of urls.slice(0, 4)) {
+			const {hostname} = new URL(url);
+			const imageData = await download(url, undefined, {
+				headers: {
+					...(hostname === 'files.slack.com' ? {Authorization: `Bearer ${config.slack.token}`} : {}),
+				},
+			});
+			const data = await twitter(account, 'POST', 'media/upload', {
+				media_data: imageData.toString('base64'),
+				media_category: 'tweet_image',
+			});
+			mediaIds.push(data.media_id_string);
+		}
+
+		// Unescape
+		let text = message.text.replace(/<(?<component>.+?)>/g, (match, component) => {
+			const [info, displayText] = component.split('|');
+			if ((/^[@#!]/).test(info)) {
+				return '';
+			}
+			if (usedUrls.has(unescapeSlackComponent(info))) {
+				return '';
+			}
+			if (displayText) {
+				return displayText;
+			}
+			return info;
+		});
+		text = unescapeSlackComponent(text).trim();
+
 		try {
-			const data = await twitter(account, 'POST', 'statuses/update', {status: message.text});
-			logger.info(`Tweeted ${JSON.stringify(message.text)} with tweet ID ${data.id_str}`);
+			const data = await twitter(account, 'POST', 'statuses/update', {
+				status: text,
+				...(mediaIds.length > 0 ? {media_ids: mediaIds.join(',')} : {}),
+			});
+			logger.info(`Tweeted ${JSON.stringify(text)} with tweet ID ${data.id_str}`);
 		} catch (error) {
 			logger.error('Tweet errored', error);
 		}
