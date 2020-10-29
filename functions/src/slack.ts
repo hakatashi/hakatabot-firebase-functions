@@ -45,6 +45,9 @@ const slack = new WebClient(config.slack.token);
 const eventAdapter = createEventAdapter(config.slack.signing_secret, {waitForResponse: true});
 
 const getTwitterAccount = (reaction: string) => {
+	if (reaction === 'red_large_satos_square') {
+		return 'satos_sandbox';
+	}
 	if (reaction === 'white_large_square' || reaction === 'red_large_square') {
 		return 'hakatashi';
 	}
@@ -71,10 +74,14 @@ const unescapeSlackComponent = (text: string) => (
 );
 
 eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
-	if (event.user === HAKATASHI_ID && event.item_user === HAKATASHI_ID && event.item.type === 'message') {
+	if (event.item.type === 'message') {
 		const account = getTwitterAccount(event.reaction);
 
 		if (account === null) {
+			return;
+		}
+
+		if (account !== 'satos_sandbox' && !(event.user === HAKATASHI_ID && event.item_user === HAKATASHI_ID)) {
 			return;
 		}
 
