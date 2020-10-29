@@ -28,7 +28,7 @@ interface Message {
 const config = getConfig();
 
 const slack = new WebClient(config.slack.token);
-const eventAdapter = createEventAdapter(config.slack.signing_secret);
+const eventAdapter = createEventAdapter(config.slack.signing_secret, {waitForResponse: true});
 
 const getTwitterAccount = (reaction: string) => {
 	if (reaction === 'white_large_square' || reaction === 'red_large_square') {
@@ -78,5 +78,13 @@ eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
 		}
 	}
 });
+
+// What's wrong?
+eventAdapter.constructor.prototype.emit = async function (eventName: string, event: any, respond: Function) {
+	for (const listener of this.listeners(eventName) as Function[]) {
+		await listener.call(this, event);
+	}
+	respond();
+};
 
 export const slackEvent = https.onRequest(eventAdapter.requestListener());
