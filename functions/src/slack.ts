@@ -2,7 +2,7 @@ import {createEventAdapter} from '@slack/events-api';
 import {WebClient} from '@slack/web-api';
 import download from 'download';
 import {https, logger, config as getConfig} from 'firebase-functions';
-import {HAKATASHI_ID} from './const';
+import {HAKATASHI_ID, SATOS_ID, SANDBOX_ID} from './const';
 import twitter from './twitter';
 
 interface ReactionAddedEvent {
@@ -85,6 +85,10 @@ eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
 			return;
 		}
 
+		if (account === 'satos_sandbox' && !(event.item_user === SATOS_ID && event.item.channel === SANDBOX_ID)) {
+			return;
+		}
+
 		const {messages}: {messages: Message[]} = await slack.conversations.replies({
 			channel: event.item.channel,
 			ts: event.item.ts,
@@ -147,6 +151,10 @@ eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
 			return info;
 		});
 		text = unescapeSlackComponent(text).trim();
+
+		if (account === 'satos_sandbox') {
+			text = `[${event.user}] ${text}`;
+		}
 
 		try {
 			const data = await twitter(account, 'POST', 'statuses/update', {
