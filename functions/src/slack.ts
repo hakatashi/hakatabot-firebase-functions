@@ -29,6 +29,12 @@ interface File {
 	mimetype: string,
 }
 
+interface Reaction {
+	count: number,
+	name: string,
+	users: string[],
+}
+
 interface Message {
 	type: string,
 	subtype: string,
@@ -37,6 +43,7 @@ interface Message {
 	username: string,
 	attachments?: Attachment[],
 	files?: File[],
+	reactions?: Reaction[],
 }
 
 const config = getConfig();
@@ -102,6 +109,13 @@ eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
 		}
 
 		const message = messages[0]!;
+
+		if (account === 'satos_sandbox' && message.reactions) {
+			const reaction = message.reactions.find(({name}) => event.reaction === name);
+			if (reaction && reaction.count >= 2) {
+				return;
+			}
+		}
 
 		const urls = [];
 
