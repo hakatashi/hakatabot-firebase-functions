@@ -10,3 +10,6 @@ typings/
 
 # Node.js dependency directory
 node_modules/
+
+# Runtime configs which includes secrets
+.runtimeconfig.json
