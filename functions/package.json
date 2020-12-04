@@ -17,7 +17,7 @@
     "@slack/events-api": "^2.3.4",
     "@slack/web-api": "^5.13.0",
     "download": "^8.0.0",
-    "firebase-admin": "^9.4.0",
+    "firebase-admin": "^9.4.1",
     "firebase-functions": "^3.11.0",
     "googleapis": "^61.0.0",
     "oauth": "^0.9.15"
