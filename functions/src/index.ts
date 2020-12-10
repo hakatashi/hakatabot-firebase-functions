@@ -1,14 +1,13 @@
-import {IncomingWebhook} from '@slack/webhook';
-import axios from 'axios';
 import {https, logger, config as getConfig} from 'firebase-functions';
 import {google} from 'googleapis';
+import {GoogleTokens} from './firestore';
 
 export * from './slack';
 export * from './crons';
 
 const config = getConfig();
 
-const cookingWebhook = new IncomingWebhook(config.slack.webhooks.cooking);
+const oauth2 = google.oauth2('v2');
 
 const oauth2Client = new google.auth.OAuth2(
 	config.google.client_id,
@@ -17,13 +16,15 @@ const oauth2Client = new google.auth.OAuth2(
 );
 
 export const authenticateGoogleApi = https.onRequest((request, response) => {
+	logger.info(request.url);
 	const url = oauth2Client.generateAuthUrl({
 		access_type: 'offline',
 		scope: [
 			'https://www.googleapis.com/auth/photoslibrary',
-			'https://www.googleapis.com/auth/photoslibrary.readonly',
-			'https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata',
+			'https://www.googleapis.com/auth/userinfo.email',
+			'https://www.googleapis.com/auth/userinfo.profile',
 		],
+		redirect_uri: 'http://localhost:5001/hakatabot-firebase-functions/us-central1/googleApiOauthCallback',
 	});
 	logger.info(url);
 	response.redirect(url);
@@ -35,47 +36,20 @@ export const googleApiOauthCallback = https.onRequest(async (request, response) 
 		response.sendStatus(400).end();
 		return;
 	}
-	const {tokens} = await oauth2Client.getToken(code);
+	const data = await oauth2Client.getToken({
+		code,
+		redirect_uri: 'http://localhost:5001/hakatabot-firebase-functions/us-central1/googleApiOauthCallback',
+	});
+	const {tokens} = data;
 	oauth2Client.setCredentials(tokens);
 
-	const res = await axios.post('https://photoslibrary.googleapis.com/v1/mediaItems:search', {
-		filters: {
-			contentFilter: {
-				includedContentCategories: [
-					'FOOD',
-				],
-			},
-		},
-	}, {
-		headers: {
-			Authorization: `Bearer ${tokens.access_token}`,
-			'Content-Type': 'application/json',
-		},
-	});
+	const tokenInfo = await oauth2.tokeninfo({auth: oauth2Client});
+	if (!tokenInfo.data || !tokenInfo.data.email) {
+		response.sendStatus(500).end();
+		return;
+	}
 
-	const item = res.data.mediaItems[4];
-	const url = `${item.baseUrl}=w1264-h948`;
-	await cookingWebhook.send({
-		text: `料理した <${url}|写真>`,
-		unfurl_links: false,
-		unfurl_media: false,
-		blocks: [
-			{
-				type: 'section',
-				text: {
-					type: 'plain_text',
-					text: '料理した',
-					emoji: true,
-				},
-			},
-			{
-				type: 'image',
-				block_id: 'image',
-				image_url: url,
-				alt_text: '料理',
-			},
-		],
-	});
+	await GoogleTokens.doc(tokenInfo.data.email).set(tokens);
 
-	response.send('hoge');
+	response.send('ok');
 });
