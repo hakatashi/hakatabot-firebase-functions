@@ -1,6 +1,7 @@
 import {IncomingWebhook} from '@slack/webhook';
 import axios from 'axios';
 import {logger, pubsub, config as getConfig} from 'firebase-functions';
+import cloudinary from '../cloudinary';
 import {HAKATASHI_EMAIL} from '../const';
 import {GoogleTokens, GoogleFoodPhotos} from '../firestore';
 import {oauth2Client} from '../google';
@@ -43,7 +44,13 @@ export const foodshareCronJob = pubsub.schedule('every 5 minutes').onRun(async (
 
 		photoEntry.set(item);
 
-		const url = `${item.baseUrl}=w1264-h948`;
+		const originalUrl = `${item.baseUrl}=d`;
+		const result = await cloudinary.uploader.upload(originalUrl);
+		const url = cloudinary.url(`${result.public_id}.jpg`, {
+			width: 1280,
+			height: 1280,
+			crop: 'fit',
+		});
 		await cookingWebhook.send({
 			text: `料理した <${url}|写真>`,
 			unfurl_links: false,

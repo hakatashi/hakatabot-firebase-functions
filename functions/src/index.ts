@@ -16,7 +16,6 @@ export const authenticateGoogleApi = https.onRequest((request, response) => {
 			'https://www.googleapis.com/auth/userinfo.email',
 			'https://www.googleapis.com/auth/userinfo.profile',
 		],
-		// redirect_uri: 'http://localhost:5001/hakatabot-firebase-functions/us-central1/googleApiOauthCallback',
 	});
 	response.redirect(url);
 });
@@ -37,7 +36,7 @@ export const googleApiOauthCallback = https.onRequest(async (request, response) 
 		return;
 	}
 
-	await GoogleTokens.doc(tokenInfo.data.email).update(tokens);
+	await GoogleTokens.doc(tokenInfo.data.email).set(tokens, {merge: true});
 
 	response.send('ok');
 });

@@ -22,6 +22,6 @@ oauth2Client.on('tokens', async (tokens) => {
 		if (!tokenInfo.data || !tokenInfo.data.email) {
 			return;
 		}
-		await GoogleTokens.doc(tokenInfo.data.email).update(tokens);
+		await GoogleTokens.doc(tokenInfo.data.email).set(tokens, {merge: true});
 	}
 });
