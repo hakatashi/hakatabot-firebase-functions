@@ -1,0 +1,22 @@
+{
+  "name": "hakatabot-firebase-functions",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "dependencies": {},
+  "devDependencies": {},
+  "scripts": {
+    "dev": "firebase emulators:start --export-on-exit db --import db"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hakatashi/hakatabot-firebase-functions.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hakatashi/hakatabot-firebase-functions/issues"
+  },
+  "homepage": "https://github.com/hakatashi/hakatabot-firebase-functions#readme"
+}
