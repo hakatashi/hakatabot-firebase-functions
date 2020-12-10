@@ -9,7 +9,7 @@ const config = getConfig();
 
 const cookingWebhook = new IncomingWebhook(config.slack.webhooks.cooking);
 
-export const foodshareCronJob = pubsub.schedule('every 1 minute').onRun(async () => {
+export const foodshareCronJob = pubsub.schedule('every 5 minutes').onRun(async () => {
 	const hakatashiTokensData = await GoogleTokens.doc(HAKATASHI_EMAIL).get();
 
 	if (!hakatashiTokensData.exists) {
