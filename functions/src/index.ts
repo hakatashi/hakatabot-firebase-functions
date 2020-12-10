@@ -1,22 +1,14 @@
-import {https, logger, config as getConfig} from 'firebase-functions';
+import {https} from 'firebase-functions';
 import {google} from 'googleapis';
 import {GoogleTokens} from './firestore';
+import {oauth2Client} from './google';
 
 export * from './slack';
 export * from './crons';
 
-const config = getConfig();
-
 const oauth2 = google.oauth2('v2');
 
-const oauth2Client = new google.auth.OAuth2(
-	config.google.client_id,
-	config.google.client_secret,
-	'https://us-central1-hakatabot-firebase-functions.cloudfunctions.net/googleApiOauthCallback',
-);
-
 export const authenticateGoogleApi = https.onRequest((request, response) => {
-	logger.info(request.url);
 	const url = oauth2Client.generateAuthUrl({
 		access_type: 'offline',
 		scope: [
@@ -26,7 +18,6 @@ export const authenticateGoogleApi = https.onRequest((request, response) => {
 		],
 		redirect_uri: 'http://localhost:5001/hakatabot-firebase-functions/us-central1/googleApiOauthCallback',
 	});
-	logger.info(url);
 	response.redirect(url);
 });
 
