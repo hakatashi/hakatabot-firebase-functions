@@ -13,15 +13,15 @@ export const oauth2Client = new google.auth.OAuth2(
 );
 
 oauth2Client.on('tokens', async (tokens) => {
-	logger.info(tokens);
-	if (tokens.refresh_token) {
+	logger.info('Google token was updated');
+	if (tokens.access_token && tokens.id_token) {
 		const tokenInfo = await oauth2.tokeninfo({
-			access_token: tokens.access_token!,
-			id_token: tokens.id_token!,
+			access_token: tokens.access_token,
+			id_token: tokens.id_token,
 		});
 		if (!tokenInfo.data || !tokenInfo.data.email) {
 			return;
 		}
-		await GoogleTokens.doc(tokenInfo.data.email).set(tokens);
+		await GoogleTokens.doc(tokenInfo.data.email).update(tokens);
 	}
 });

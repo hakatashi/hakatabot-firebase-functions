@@ -27,11 +27,8 @@ export const googleApiOauthCallback = https.onRequest(async (request, response) 
 		response.sendStatus(400).end();
 		return;
 	}
-	const data = await oauth2Client.getToken({
-		code,
-		// redirect_uri: 'http://localhost:5001/hakatabot-firebase-functions/us-central1/googleApiOauthCallback',
-	});
-	const {tokens} = data;
+	const {tokens} = await oauth2Client.getToken(code);
+
 	oauth2Client.setCredentials(tokens);
 
 	const tokenInfo = await oauth2.tokeninfo({auth: oauth2Client});
@@ -40,7 +37,7 @@ export const googleApiOauthCallback = https.onRequest(async (request, response) 
 		return;
 	}
 
-	await GoogleTokens.doc(tokenInfo.data.email).set(tokens);
+	await GoogleTokens.doc(tokenInfo.data.email).update(tokens);
 
 	response.send('ok');
 });
