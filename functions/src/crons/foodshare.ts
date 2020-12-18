@@ -36,7 +36,7 @@ export const foodshareCronJob = pubsub.schedule('every 5 minutes').onRun(async (
 		},
 	});
 
-	for (const item of res.data.mediaItems) {
+	for (const item of res.data.mediaItems.slice().reverse()) {
 		const photoEntry = GoogleFoodPhotos.doc(item.id);
 		if ((await photoEntry.get()).exists) {
 			continue;
