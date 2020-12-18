@@ -15,7 +15,7 @@
   "main": "lib/index.js",
   "dependencies": {
     "@slack/events-api": "^2.3.4",
-    "@slack/web-api": "^5.13.0",
+    "@slack/web-api": "^5.14.0",
     "@slack/webhook": "^5.0.3",
     "axios": "^0.21.0",
     "cloudinary": "^1.23.0",
