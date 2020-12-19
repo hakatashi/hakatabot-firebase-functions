@@ -6,7 +6,8 @@
   "dependencies": {},
   "devDependencies": {},
   "scripts": {
-    "dev": "firebase emulators:start --export-on-exit db --import db"
+    "dev": "firebase emulators:start --export-on-exit db --import db",
+    "install": "cd functions && npm install"
   },
   "repository": {
     "type": "git",
