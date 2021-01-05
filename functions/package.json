@@ -16,7 +16,7 @@
   "dependencies": {
     "@slack/events-api": "^2.3.4",
     "@slack/web-api": "^5.14.0",
-    "@slack/webhook": "^5.0.3",
+    "@slack/webhook": "^5.0.4",
     "axios": "^0.21.1",
     "cloudinary": "^1.23.0",
     "download": "^8.0.0",
