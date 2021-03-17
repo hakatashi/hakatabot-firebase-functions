@@ -41,6 +41,7 @@ export interface Message {
 	subtype: string,
 	text: string,
 	ts: string,
+	user: string,
 	username: string,
 	attachments?: Attachment[],
 	files?: File[],
