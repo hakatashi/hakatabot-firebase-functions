@@ -3,7 +3,7 @@ import {google} from 'googleapis';
 import {GoogleTokens} from './firestore';
 import {oauth2Client} from './google';
 
-export * from './slack';
+export {slackEvent} from './slack';
 export * from './crons';
 
 const oauth2 = google.oauth2('v2');

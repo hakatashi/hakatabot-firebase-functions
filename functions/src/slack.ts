@@ -1,5 +1,6 @@
 import {createEventAdapter} from '@slack/events-api';
 import {WebClient} from '@slack/web-api';
+import type {WebAPICallResult, MessageAttachment, KnownBlock} from '@slack/web-api';
 import download from 'download';
 import {https, logger, config as getConfig} from 'firebase-functions';
 import {HAKATASHI_ID, SATOS_ID, SANDBOX_ID} from './const';
@@ -18,7 +19,7 @@ interface ReactionAddedEvent {
 	event_ts: string,
 }
 
-interface Attachment {
+interface Attachment extends MessageAttachment {
 	original_url?: string,
 	image_url?: string,
 	service_name?: string,
@@ -35,7 +36,7 @@ interface Reaction {
 	users: string[],
 }
 
-interface Message {
+export interface Message {
 	type: string,
 	subtype: string,
 	text: string,
@@ -44,6 +45,11 @@ interface Message {
 	attachments?: Attachment[],
 	files?: File[],
 	reactions?: Reaction[],
+	blocks?: KnownBlock[],
+}
+
+export interface GetMessagesResult extends WebAPICallResult {
+	messages: Message[],
 }
 
 const config = getConfig();
@@ -96,13 +102,13 @@ eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
 			return;
 		}
 
-		const {messages}: {messages: Message[]} = await slack.conversations.replies({
+		const {messages} = await slack.conversations.replies({
 			channel: event.item.channel,
 			ts: event.item.ts,
 			latest: event.item.ts,
 			inclusive: true,
 			limit: 1,
-		}) as any;
+		}) as GetMessagesResult;
 
 		if (!messages || messages.length !== 1) {
 			return;
@@ -191,3 +197,4 @@ eventAdapter.constructor.prototype.emit = async function (eventName: string, eve
 };
 
 export const slackEvent = https.onRequest(eventAdapter.requestListener());
+export {slack as webClient};

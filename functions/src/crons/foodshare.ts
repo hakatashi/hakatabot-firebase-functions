@@ -1,16 +1,20 @@
 import {IncomingWebhook} from '@slack/webhook';
 import axios from 'axios';
+import download from 'download';
 import {logger, pubsub, config as getConfig} from 'firebase-functions';
 import cloudinary from '../cloudinary';
 import {HAKATASHI_EMAIL} from '../const';
 import {GoogleTokens, GoogleFoodPhotos} from '../firestore';
 import {oauth2Client} from '../google';
+import {webClient as slack} from '../slack';
+import type {GetMessagesResult} from '../slack';
+import twitter from '../twitter';
 
 const config = getConfig();
 
 const cookingWebhook = new IncomingWebhook(config.slack.webhooks.cooking);
 
-export const foodshareCronJob = pubsub.schedule('every 5 minutes').onRun(async () => {
+export const foodshareSlackCronJob = pubsub.schedule('every 5 minutes').onRun(async () => {
 	const hakatashiTokensData = await GoogleTokens.doc(HAKATASHI_EMAIL).get();
 
 	if (!hakatashiTokensData.exists) {
@@ -72,5 +76,53 @@ export const foodshareCronJob = pubsub.schedule('every 5 minutes').onRun(async (
 				},
 			],
 		});
+	}
+});
+
+export const foodshareTwitterCronJob = pubsub.schedule('every 5 minutes').onRun(async (context) => {
+	const now = new Date(context.timestamp).getTime();
+	const pinDate = new Date('2021-06-26T00:00:00Z').getTime();
+
+	let rangeEnd = now - 3 * 24 * 60 * 60 * 1000;
+	let rangeStart = rangeEnd - 5 * 60 * 1000;
+	if (now < pinDate) {
+		rangeEnd = pinDate - (pinDate - rangeEnd) / 2 * 3;
+		rangeStart = pinDate - (pinDate - rangeStart) / 2 * 3;
+	}
+
+	const {messages} = await slack.conversations.history({
+		channel: config.slack.channels.cooking,
+		inclusive: true,
+		latest: (rangeEnd / 1000).toString(),
+		oldest: (rangeStart / 1000).toString(),
+		limit: 100,
+	}) as GetMessagesResult;
+
+	for (const message of messages) {
+		if (message.subtype === 'bot_message' && message.username === '博多市料理bot') {
+			const block = message.blocks?.find(({type}) => type === 'image');
+			if (block?.type === 'image') {
+				if (message.reactions?.some(({name, users}) => (
+					name === 'thinking_face' && users.includes(config.slack.users.hakatashi)
+				))) {
+					continue;
+				}
+
+				const url = block.image_url;
+				const imageData = await download(url);
+				const uploadResult = await twitter('hakatashi_B', 'POST', 'media/upload', {
+					media_data: imageData.toString('base64'),
+					media_category: 'tweet_image',
+				});
+				const mediaId = uploadResult.media_id_string;
+
+				const postResult = await twitter('hakatashi_B', 'POST', 'statuses/update', {
+					status: '料理した',
+					media_ids: mediaId,
+				});
+				logger.info(`Tweeted cooking image with tweet ID ${postResult.id_str}`);
+			}
+			return;
+		}
 	}
 });
