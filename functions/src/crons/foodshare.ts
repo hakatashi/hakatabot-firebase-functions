@@ -4,7 +4,7 @@ import download from 'download';
 import {logger, pubsub, config as getConfig} from 'firebase-functions';
 import cloudinary from '../cloudinary';
 import {HAKATASHI_EMAIL} from '../const';
-import {GoogleTokens, GoogleFoodPhotos} from '../firestore';
+import {GoogleTokens, GoogleFoodPhotos, State} from '../firestore';
 import {oauth2Client} from '../google';
 import {webClient as slack} from '../slack';
 import type {GetMessagesResult} from '../slack';
@@ -80,15 +80,21 @@ export const foodshareSlackCronJob = pubsub.schedule('every 5 minutes').onRun(as
 });
 
 export const foodshareTwitterCronJob = pubsub.schedule('every 5 minutes').onRun(async (context) => {
+	const state = new State('foodshare-twitter-cron-job');
+
 	const now = new Date(context.timestamp).getTime();
 	const pinDate = new Date('2021-06-26T00:00:00Z').getTime();
 
+	const lastRun = await state.get('lastRun', now - 5 * 60 * 1000);
+
 	let rangeEnd = now - 3 * 24 * 60 * 60 * 1000;
-	let rangeStart = rangeEnd - 5 * 60 * 1000;
+	let rangeStart = lastRun - 3 * 24 * 60 * 60 * 1000;
 	if (now < pinDate) {
 		rangeEnd = pinDate - (pinDate - rangeEnd) / 2 * 3;
 		rangeStart = pinDate - (pinDate - rangeStart) / 2 * 3;
 	}
+
+	await state.set({lastRun: now});
 
 	const {messages} = await slack.conversations.history({
 		channel: config.slack.channels.cooking,
