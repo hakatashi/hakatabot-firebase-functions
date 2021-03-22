@@ -3,5 +3,7 @@ module.exports = {
 	rules: {
 		'import/prefer-default-export': 'off',
 		camelcase: 'off',
+		'no-unused-vars': 'off',
+		'no-dupe-class-members': 'off',
 	},
 };
