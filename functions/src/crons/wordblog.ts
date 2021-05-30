@@ -226,6 +226,12 @@ export const updateWordBlog = pubsub.schedule('0 10 * * *').timeZone('Asia/Tokyo
 
 	logger.info(`done. (commit = ${newRef.object.sha})`);
 
+	logger.info('Waiting for 60 seconds...');
+
+	await new Promise((resolve) => {
+		setTimeout(resolve, 60 * 1000);
+	});
+
 	const url = `https://word.hakatashi.com/${date.replace(/-/g, '')}/`
 
 	logger.info('Posting tweet...');
