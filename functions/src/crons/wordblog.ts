@@ -56,6 +56,9 @@ const getCite = (cite: string, word: string) => {
 	if (cite === 'kojien') {
 		return `<cite>広辞苑「${word}」</cite>より引用`
 	}
+	if (cite === 'kotobank') {
+		return `<cite>[コトバンク「${word}」](https://kotobank.jp/word/${encodeURIComponent(word)})</cite>より引用`
+	}
 	if (cite === 'wikipedia') {
 		return `<cite>[${word} - Wikipedia](https://ja.wikipedia.org/wiki/${encodeURIComponent(word)})}/)</cite>より引用`
 	}
