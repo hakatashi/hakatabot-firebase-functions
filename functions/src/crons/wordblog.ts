@@ -41,7 +41,7 @@ interface ScrapboxPage {
 interface Entry {
 	word: string,
 	ruby: string,
-	description: string[],
+	descriptions: string[],
 	cite: string,
 }
 
@@ -51,16 +51,16 @@ const github = new Octokit({
 
 const getCite = (cite: string, word: string) => {
 	if (cite === 'goo') {
-		return `<cite>[デジタル大辞泉「${word}」](https://dictionary.goo.ne.jp/word/${encodeURIComponent(word)}/)</cite>より引用`
+		return `<cite>[デジタル大辞泉「${word}」](https://dictionary.goo.ne.jp/word/${encodeURIComponent(word)}/)</cite>より引用`;
 	}
 	if (cite === 'kojien') {
-		return `<cite>広辞苑「${word}」</cite>より引用`
+		return `<cite>広辞苑「${word}」</cite>より引用`;
 	}
 	if (cite === 'kotobank') {
-		return `<cite>[コトバンク「${word}」](https://kotobank.jp/word/${encodeURIComponent(word)})</cite>より引用`
+		return `<cite>[コトバンク「${word}」](https://kotobank.jp/word/${encodeURIComponent(word)})</cite>より引用`;
 	}
 	if (cite === 'wikipedia') {
-		return `<cite>[${word} - Wikipedia](https://ja.wikipedia.org/wiki/${encodeURIComponent(word)})}/)</cite>より引用`
+		return `<cite>[${word} - Wikipedia](https://ja.wikipedia.org/wiki/${encodeURIComponent(word)})}/)</cite>より引用`;
 	}
 	return '';
 };
@@ -73,7 +73,7 @@ export const updateWordBlog = pubsub.schedule('0 10 * * *').timeZone('Asia/Tokyo
 		day: '2-digit',
 	}).format(new Date(context.timestamp));
 
-	logger.info(`Retrieving Scrapbox data...`);
+	logger.info('Retrieving Scrapbox data...');
 
 	const scrapboxUrl = `https://scrapbox.io/api/pages/hakatashi/${encodeURIComponent('日本語')}`;
 	const {data} = await axios.get<ScrapboxPage>(scrapboxUrl, {
@@ -86,7 +86,7 @@ export const updateWordBlog = pubsub.schedule('0 10 * * *').timeZone('Asia/Tokyo
 	{
 		let word = '';
 		let ruby = '';
-		let description: string[] = [];
+		let descriptions: string[] = [];
 		let cite = '';
 		for (const line of data.lines) {
 			const indents = line.text.match(/^[ \t]*/)![0] || '';
@@ -99,10 +99,10 @@ export const updateWordBlog = pubsub.schedule('0 10 * * *').timeZone('Asia/Tokyo
 
 			if (indentLevel === 1) {
 				if (word !== '') {
-					entries.push({word, ruby, description, cite});
+					entries.push({word, ruby, descriptions, cite});
 					word = '';
 					ruby = '';
-					description = [];
+					descriptions = [];
 					cite = '';
 				}
 
@@ -120,11 +120,11 @@ export const updateWordBlog = pubsub.schedule('0 10 * * *').timeZone('Asia/Tokyo
 				continue;
 			}
 
-			description.push('    '.repeat(indentLevel - 2) + text);
+			descriptions.push('    '.repeat(indentLevel - 2) + text);
 		}
 
 		if (word !== '') {
-			entries.push({word, ruby, description, cite});
+			entries.push({word, ruby, descriptions, cite});
 		}
 	}
 
@@ -157,7 +157,7 @@ export const updateWordBlog = pubsub.schedule('0 10 * * *').timeZone('Asia/Tokyo
 
 	logger.info(`Retrieved ${postedEntries.size} posted entries`);
 
-	const entry = entries.find((e) => !postedEntries.has(e.word));
+	const entry = entries.find(({word}) => !postedEntries.has(word));
 	if (entry === undefined) {
 		logger.info('Couldn\'t find entry to post. Exiting...');
 		return;
@@ -172,7 +172,7 @@ export const updateWordBlog = pubsub.schedule('0 10 * * *').timeZone('Asia/Tokyo
 		`date: ${date} 10:00:00`,
 		'---',
 		'',
-		...entry.description,
+		...entry.descriptions,
 		'',
 		getCite(entry.cite, entry.word),
 	];
@@ -180,7 +180,7 @@ export const updateWordBlog = pubsub.schedule('0 10 * * *').timeZone('Asia/Tokyo
 	logger.info(`File to post: ${JSON.stringify(lines)}`);
 
 	logger.info('Getting commit hash...');
-	const {data: ref} = await github.git.getRef({owner, repo, ref: `heads/${defaultBranch}`})
+	const {data: ref} = await github.git.getRef({owner, repo, ref: `heads/${defaultBranch}`});
 	const commitHash = ref.object.sha;
 
 	logger.info('Getting tree hash...');
@@ -232,7 +232,7 @@ export const updateWordBlog = pubsub.schedule('0 10 * * *').timeZone('Asia/Tokyo
 		setTimeout(resolve, 60 * 1000);
 	});
 
-	const url = `https://word.hakatashi.com/${date.replace(/-/g, '')}/`
+	const url = `https://word.hakatashi.com/${date.replace(/-/g, '')}/`;
 
 	logger.info('Posting tweet...');
 	const res = await twitter('hakatashi_b', 'POST', 'statuses/update', {
