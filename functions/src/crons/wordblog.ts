@@ -65,7 +65,7 @@ const getCite = (cite: string, word: string) => {
 	return '';
 };
 
-const updateWordBlogFunction = async (context) => {
+const updateWordBlogFunction = async (context: functions.EventContext) => {
 	const date = new Intl.DateTimeFormat('eo', {
 		timeZone: 'Asia/Tokyo',
 		year: 'numeric',
