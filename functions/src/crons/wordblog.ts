@@ -1,6 +1,6 @@
 import {Octokit} from '@octokit/rest';
 import axios from 'axios';
-import {logger, pubsub, config as getConfig} from 'firebase-functions';
+import functions, {logger, config as getConfig} from 'firebase-functions';
 import twitter from '../twitter';
 
 const config = getConfig();
@@ -65,7 +65,7 @@ const getCite = (cite: string, word: string) => {
 	return '';
 };
 
-export const updateWordBlog = pubsub.schedule('0 10 * * *').timeZone('Asia/Tokyo').onRun(async (context) => {
+const updateWordBlogFunction = async (context) => {
 	const date = new Intl.DateTimeFormat('eo', {
 		timeZone: 'Asia/Tokyo',
 		year: 'numeric',
@@ -240,4 +240,10 @@ export const updateWordBlog = pubsub.schedule('0 10 * * *').timeZone('Asia/Tokyo
 	});
 
 	logger.info(`done. (id_str = ${res.id_str})`);
-});
+};
+
+export const updateWordBlog = functions
+	.runWith({timeoutSeconds: 120})
+	.pubsub.schedule('0 10 * * *')
+	.timeZone('Asia/Tokyo')
+	.onRun(updateWordBlogFunction);
