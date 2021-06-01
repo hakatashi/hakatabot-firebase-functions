@@ -6,5 +6,6 @@ module.exports = {
 		'no-unused-vars': 'off',
 		'no-dupe-class-members': 'off',
 		'import/default': 'off',
+		'import/no-namespace': 'off',
 	},
 };
