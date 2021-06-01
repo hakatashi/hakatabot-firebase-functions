@@ -1,6 +1,7 @@
 import {Octokit} from '@octokit/rest';
 import axios from 'axios';
-import functions, {logger, config as getConfig} from 'firebase-functions';
+import * as functions from 'firebase-functions';
+import {logger, config as getConfig} from 'firebase-functions';
 import twitter from '../twitter';
 
 const config = getConfig();
