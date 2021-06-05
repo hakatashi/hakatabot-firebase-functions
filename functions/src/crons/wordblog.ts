@@ -61,7 +61,7 @@ const getCite = (cite: string, word: string) => {
 		return `<cite>[コトバンク「${word}」](https://kotobank.jp/word/${encodeURIComponent(word)})</cite>より引用`;
 	}
 	if (cite === 'wikipedia') {
-		return `<cite>[${word} - Wikipedia](https://ja.wikipedia.org/wiki/${encodeURIComponent(word)})}/)</cite>より引用`;
+		return `<cite>[${word} - Wikipedia](https://ja.wikipedia.org/wiki/${encodeURIComponent(word)})</cite>より引用`;
 	}
 	return '';
 };
