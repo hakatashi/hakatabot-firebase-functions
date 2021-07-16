@@ -21,7 +21,7 @@
     "axios": "^0.21.1",
     "cloudinary": "^1.26.1",
     "download": "^8.0.0",
-    "firebase-admin": "^9.9.0",
+    "firebase-admin": "^9.10.0",
     "firebase-functions": "^3.14.1",
     "googleapis": "^74.2.0",
     "oauth": "^0.9.15"
