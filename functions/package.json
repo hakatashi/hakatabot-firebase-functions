@@ -19,7 +19,7 @@
     "@slack/web-api": "^6.5.1",
     "@slack/webhook": "^6.0.0",
     "axios": "^0.24.0",
-    "cloudinary": "^1.27.1",
+    "cloudinary": "^1.28.1",
     "download": "^8.0.0",
     "firebase-admin": "^10.0.2",
     "firebase-functions": "^3.16.0",
