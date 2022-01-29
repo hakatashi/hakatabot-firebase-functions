@@ -23,7 +23,7 @@
     "download": "^8.0.0",
     "firebase-admin": "^10.0.2",
     "firebase-functions": "^3.16.0",
-    "googleapis": "^74.2.0",
+    "googleapis": "^92.0.0",
     "oauth": "^0.9.15"
   },
   "devDependencies": {
