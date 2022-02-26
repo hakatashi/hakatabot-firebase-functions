@@ -63,6 +63,7 @@ export const getWaka = async () => {
 		}
 
 		if ((results = line.match(/\d+/))) {
+			// eslint-disable-next-line prefer-destructuring
 			number = results[0];
 			author = null;
 			text = null;
