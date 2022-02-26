@@ -22,6 +22,7 @@ const derivedNames = [
 	{start: 0x2B820, end: 0x2CEA1},
 	{start: 0x2CEB0, end: 0x2EBE0},
 	{start: 0x2F800, end: 0x2FA1D},
+	{start: 0x30000, end: 0x3134F},
 ];
 
 const unicodes = [...unicodeNames.entries()].filter(([codepoint, name]) => {
