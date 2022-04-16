@@ -83,16 +83,11 @@ export const foodshareTwitterCronJob = pubsub.schedule('every 5 minutes').onRun(
 	const state = new State('foodshare-twitter-cron-job');
 
 	const now = new Date(context.timestamp).getTime();
-	const pinDate = new Date('2021-06-26T00:00:00Z').getTime();
 
 	const lastRun = await state.get('lastRun', now - 5 * 60 * 1000);
 
-	let rangeEnd = now - 3 * 24 * 60 * 60 * 1000;
-	let rangeStart = lastRun - 3 * 24 * 60 * 60 * 1000;
-	if (now < pinDate) {
-		rangeEnd = pinDate - (pinDate - rangeEnd) / 2 * 3;
-		rangeStart = pinDate - (pinDate - rangeStart) / 2 * 3;
-	}
+	const rangeEnd = now - 3 * 24 * 60 * 60 * 1000;
+	const rangeStart = lastRun - 3 * 24 * 60 * 60 * 1000;
 
 	await state.set({lastRun: now});
 
