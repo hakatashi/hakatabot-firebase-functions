@@ -21,7 +21,7 @@
     "@unicode/unicode-14.0.0": "^1.2.1",
     "axios": "^0.26.1",
     "cheerio": "^1.0.0-rc.10",
-    "cloudinary": "^1.29.0",
+    "cloudinary": "^1.29.1",
     "download": "^8.0.0",
     "emoji-data": "^0.2.0",
     "firebase-admin": "^10.0.2",
