@@ -19,7 +19,7 @@
     "@slack/web-api": "^6.7.1",
     "@slack/webhook": "^6.1.0",
     "@unicode/unicode-14.0.0": "^1.2.1",
-    "axios": "^0.26.1",
+    "axios": "^0.27.2",
     "cheerio": "^1.0.0-rc.10",
     "cloudinary": "^1.29.1",
     "download": "^8.0.0",
