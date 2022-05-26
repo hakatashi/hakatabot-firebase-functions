@@ -52,31 +52,34 @@ export const updateSlackStatusesCronJob = pubsub.schedule('every 10 minutes').on
 
 	const emojis = emojiData.all();
 
-	const {team} = await slack.team.info();
-	logger.info(`Updating status for team ${team?.name}...`);
+	for (const token of Object.values(config.slack.tokens as {[key: string]: string})) {
+		const {team} = await slack.team.info({token});
+		logger.info(`Updating status for team ${team?.name}...`);
 
-	const {emoji: customEmojis} = await slack.emoji.list();
-	const totalEmojis = [
-		...emojis.map((em) => em.short_name),
-		...Object.keys(customEmojis!),
-	];
+		const {emoji: customEmojis} = await slack.emoji.list({token});
+		const totalEmojis = [
+			...emojis.map((em) => em.short_name),
+			...Object.keys(customEmojis!),
+		];
 
-	const statusEmoji = `:${sample(totalEmojis)}:`;
+		const statusEmoji = `:${sample(totalEmojis)}:`;
 
-	const waka = await getWaka();
-	const [unicodePoint, unicodeName] = sample(unicodes)!;
-	const name = `U-${unicodePoint.toString(16).toUpperCase().padStart(4, '0')} ${unicodeName}`;
+		const waka = await getWaka();
+		const [unicodePoint, unicodeName] = sample(unicodes)!;
+		const name = `U-${unicodePoint.toString(16).toUpperCase().padStart(4, '0')} ${unicodeName}`;
 
-	logger.info(`New status: ${statusEmoji} ${statusText}`);
-	logger.info(`New title: ${waka}`);
-	logger.info(`New name: ${name}`);
+		logger.info(`New status: ${statusEmoji} ${statusText}`);
+		logger.info(`New title: ${waka}`);
+		logger.info(`New name: ${name}`);
 
-	await slack.users.profile.set({
-		profile: JSON.stringify({
-			title: waka,
-			status_text: statusText,
-			status_emoji: statusEmoji,
-			real_name: name,
-		}),
-	});
+		await slack.users.profile.set({
+			token,
+			profile: JSON.stringify({
+				title: waka,
+				status_text: statusText,
+				status_emoji: statusEmoji,
+				real_name: name,
+			}),
+		});
+	}
 });
