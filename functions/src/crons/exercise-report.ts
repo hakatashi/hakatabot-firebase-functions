@@ -2,7 +2,7 @@ import axios from 'axios';
 import {stripIndent} from 'common-tags';
 import {logger, pubsub} from 'firebase-functions';
 import {EXPIRATION_WINDOW_IN_SECONDS, HAKATASHI_EMAIL} from '../const';
-import {FitbitActivities, FitbitTokens} from '../firestore';
+import {AnimeWatchRecords, FitbitActivities, FitbitTokens} from '../firestore';
 import {client} from '../fitbit';
 import {webClient as slack} from '../slack';
 
@@ -60,6 +60,25 @@ export const exercisePostCronJob = pubsub.schedule('every 1 minutes').onRun(asyn
 		const endTime = startTime + duration;
 
 		if (endTime < thresholdTime) {
+			const animeWatchRecord = await AnimeWatchRecords.orderBy('date').orderBy('desc').limit(1).get();
+
+			let animeInfo = '';
+			if (!animeWatchRecord.empty) {
+				// eslint-disable-next-line prefer-destructuring
+				const record = animeWatchRecord.docs[0];
+				const date = record.get('date');
+				if (date >= now - 15 * 60 * 1000) {
+					const animeName = record.get('name');
+					const animePart = record.get('part');
+					const animePartId = record.get('partId');
+					const animeWork = record.get('work');
+					const animeWorkId = record.get('workId');
+					const animeUrl = `https://animestore.docomo.ne.jp/animestore/ci_pc?workId=${animeWorkId}&partId=${animePartId}`;
+
+					animeInfo = `(+${animeWork} <${animeUrl}|${animePart}「${animeName}」>)`;
+				}
+			}
+
 			const exerciseMinutes = Math.floor(duration / 60 / 1000);
 			const calories = activityDoc.get('calories');
 			const distance = (calories * 15).toFixed(2);
@@ -70,7 +89,7 @@ export const exercisePostCronJob = pubsub.schedule('every 1 minutes').onRun(asyn
 				icon_emoji: ':hakatashi:',
 				text: stripIndent`
 					:exercise-done: エアロバイク${exerciseMinutes}分 (:fire:${calories}kcal :bicyclist:${distance}km :heartbeat:${averageHeartRate}bpm)
-					(+ラブライブ！虹ヶ咲学園スクールアイドル同好会TVアニメ2期 <https://animestore.docomo.ne.jp/animestore/ci_pc?workId=25330&partId=25330002|第2話「重なる色」>)
+					${animeInfo}
 				`,
 				channel: 'DEHM87DM2',
 			});

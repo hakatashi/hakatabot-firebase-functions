@@ -1,4 +1,4 @@
-import {logger, https} from 'firebase-functions';
+import {https} from 'firebase-functions';
 import {google} from 'googleapis';
 import {HAKATASHI_EMAIL} from './const';
 import {GoogleTokens, FitbitTokens, AnimeWatchRecords} from './firestore';
