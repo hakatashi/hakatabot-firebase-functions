@@ -1,7 +1,7 @@
 import axios from 'axios';
 import {stripIndent} from 'common-tags';
 import {logger, pubsub} from 'firebase-functions';
-import {EXPIRATION_WINDOW_IN_SECONDS, HAKATASHI_EMAIL} from '../const';
+import {EXPIRATION_WINDOW_IN_SECONDS, FITNESS_ID, HAKATASHI_EMAIL} from '../const';
 import {AnimeWatchRecords, FitbitActivities, FitbitTokens} from '../firestore';
 import {client} from '../fitbit';
 import {webClient as slack} from '../slack';
@@ -43,7 +43,7 @@ export const exerciseGetCronJob = pubsub.schedule('every 5 minutes').onRun(async
 
 export const exercisePostCronJob = pubsub.schedule('every 1 minutes').onRun(async () => {
 	const now = Date.now();
-	const thresholdTime = now + 5 * 60 * 1000;
+	const thresholdTime = now - 5 * 60 * 1000;
 
 	const activitiesResults = await FitbitActivities.orderBy('startTime', 'desc').limit(100).get();
 	for (const activityDoc of activitiesResults.docs) {
@@ -60,7 +60,7 @@ export const exercisePostCronJob = pubsub.schedule('every 1 minutes').onRun(asyn
 		const endTime = startTime + duration;
 
 		if (endTime < thresholdTime) {
-			const animeWatchRecord = await AnimeWatchRecords.orderBy('date').orderBy('desc').limit(1).get();
+			const animeWatchRecord = await AnimeWatchRecords.orderBy('date', 'desc').limit(1).get();
 
 			let animeInfo = '';
 			if (!animeWatchRecord.empty) {
@@ -81,7 +81,7 @@ export const exercisePostCronJob = pubsub.schedule('every 1 minutes').onRun(asyn
 
 			const exerciseMinutes = Math.floor(duration / 60 / 1000);
 			const calories = activityDoc.get('calories');
-			const distance = (calories * 15).toFixed(2);
+			const distance = (calories / 20).toFixed(2);
 			const averageHeartRate = activityDoc.get('averageHeartRate');
 
 			await slack.chat.postMessage({
@@ -91,7 +91,7 @@ export const exercisePostCronJob = pubsub.schedule('every 1 minutes').onRun(asyn
 					:exercise-done: エアロバイク${exerciseMinutes}分 (:fire:${calories}kcal :bicyclist:${distance}km :heartbeat:${averageHeartRate}bpm)
 					${animeInfo}
 				`,
-				channel: 'DEHM87DM2',
+				channel: FITNESS_ID,
 			});
 
 			await activityDoc.ref.set({isPosted: true}, {merge: true});
