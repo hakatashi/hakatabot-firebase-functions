@@ -1,6 +1,8 @@
 import {https} from 'firebase-functions';
 import {google} from 'googleapis';
-import {GoogleTokens} from './firestore';
+import {HAKATASHI_EMAIL} from './const';
+import {GoogleTokens, FitbitTokens} from './firestore';
+import {client as fitbitClient} from './fitbit';
 import {oauth2Client} from './google';
 
 export {slackEvent} from './slack';
@@ -37,6 +39,32 @@ export const googleApiOauthCallback = https.onRequest(async (request, response) 
 	}
 
 	await GoogleTokens.doc(tokenInfo.data.email).set(tokens, {merge: true});
+
+	response.send('ok');
+});
+
+export const authenticateFitbitApi = https.onRequest((request, response) => {
+	const authorizationUri = fitbitClient.authorizeURL({
+		redirect_uri: 'https://us-central1-hakatabot-firebase-functions.cloudfunctions.net/fitbitApiOauthCallback',
+		scope: ['sleep', 'settings', 'oxygen_saturation', 'respiratory_rate', 'profile', 'social', 'activity', 'weight', 'heartrate', 'nutrition', 'location'],
+	});
+
+	response.redirect(authorizationUri);
+});
+
+export const fitbitApiOauthCallback = https.onRequest(async (request, response) => {
+	const code = request.query?.code;
+	if (!code || typeof code !== 'string') {
+		response.sendStatus(400).end();
+		return;
+	}
+
+	const accessToken = await fitbitClient.getToken({
+		code,
+		redirect_uri: 'https://us-central1-hakatabot-firebase-functions.cloudfunctions.net/fitbitApiOauthCallback',
+	});
+
+	await FitbitTokens.doc(HAKATASHI_EMAIL).set(accessToken.token, {merge: true});
 
 	response.send('ok');
 });

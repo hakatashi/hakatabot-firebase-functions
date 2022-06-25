@@ -7,6 +7,9 @@ firebase.initializeApp();
 export const db = firebase.firestore();
 export const GoogleTokens = db.collection('google-tokens');
 export const GoogleFoodPhotos = db.collection('google-food-photos');
+export const FitbitTokens = db.collection('fitbit-tokens');
+export const FitbitActivities = db.collection('fitbit-activities');
+export const AnimeWatchReports = db.collection('anime-watch-reports');
 export const States = db.collection('states');
 
 export class State {
