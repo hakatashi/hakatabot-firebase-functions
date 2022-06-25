@@ -22,6 +22,7 @@ export const exerciseGetCronJob = pubsub.schedule('every 5 minutes').onRun(async
 		await FitbitTokens.doc(HAKATASHI_EMAIL).set(accessToken.token, {merge: true});
 	}
 
+	logger.info('Getting fitbit activities...');
 	const res = await axios.get('https://api.fitbit.com/1/user/-/activities/list.json', {
 		params: {
 			afterDate: '1970-01-01',
@@ -34,6 +35,7 @@ export const exerciseGetCronJob = pubsub.schedule('every 5 minutes').onRun(async
 		},
 	});
 
+	logger.info(`Retrieved ${res.data.activities.length} activities`);
 	for (const activity of res.data.activities) {
 		await FitbitActivities.doc(activity.logId.toString()).set(activity, {merge: true});
 	}
@@ -70,8 +72,10 @@ export const exercisePostCronJob = pubsub.schedule('every 1 minutes').onRun(asyn
 					:exercise-done: エアロバイク${exerciseMinutes}分 (:fire:${calories}kcal :bicyclist:${distance}km :heartbeat:${averageHeartRate}bpm)
 					(+ラブライブ！虹ヶ咲学園スクールアイドル同好会TVアニメ2期 <https://animestore.docomo.ne.jp/animestore/ci_pc?workId=25330&partId=25330002|第2話「重なる色」>)
 				`,
-				channel: 'C01CVDLA7LK',
+				channel: 'DEHM87DM2',
 			});
+
+			await activityDoc.ref.set({isPosted: true}, {merge: true});
 		}
 	}
 });

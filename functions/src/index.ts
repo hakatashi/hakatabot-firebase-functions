@@ -1,7 +1,7 @@
-import {https} from 'firebase-functions';
+import {logger, https} from 'firebase-functions';
 import {google} from 'googleapis';
 import {HAKATASHI_EMAIL} from './const';
-import {GoogleTokens, FitbitTokens} from './firestore';
+import {GoogleTokens, FitbitTokens, AnimeWatchRecords} from './firestore';
 import {client as fitbitClient} from './fitbit';
 import {oauth2Client} from './google';
 
@@ -66,5 +66,14 @@ export const fitbitApiOauthCallback = https.onRequest(async (request, response) 
 
 	await FitbitTokens.doc(HAKATASHI_EMAIL).set(accessToken.token, {merge: true});
 
+	response.send('ok');
+});
+
+export const recordAnimeWatchRecord = https.onRequest(async (request, response) => {
+	if (!request.body || typeof request.body !== 'object') {
+		response.sendStatus(400).end();
+		return;
+	}
+	await AnimeWatchRecords.doc(request.body?.partId.toString()).set(request.body, {merge: true});
 	response.send('ok');
 });
