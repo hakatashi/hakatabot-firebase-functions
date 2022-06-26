@@ -54,7 +54,7 @@ export const exercisePostCronJob = pubsub.schedule('every 1 minutes').onRun(asyn
 			continue;
 		}
 
-		if (activityDoc.get('activityName') !== 'Treadmill') {
+		if (activityDoc.get('activityName') !== 'Spinning') {
 			continue;
 		}
 
