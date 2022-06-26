@@ -14,10 +14,13 @@ export const exerciseGetCronJob = pubsub.schedule('every 5 minutes').onRun(async
 		return;
 	}
 
-	const hakatashiTokens = hakatashiTokensData.data();
+	const hakatashiTokens = hakatashiTokensData.data()!;
+	hakatashiTokens.expires_at = hakatashiTokens.expires_at.toDate();
+
 	let accessToken = client.createToken(hakatashiTokens as any);
 
 	if (accessToken.expired(EXPIRATION_WINDOW_IN_SECONDS)) {
+		logger.info('Refreshing token...');
 		accessToken = await accessToken.refresh();
 		await FitbitTokens.doc(HAKATASHI_EMAIL).set(accessToken.token, {merge: true});
 	}
