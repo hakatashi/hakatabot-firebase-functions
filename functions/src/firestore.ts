@@ -8,6 +8,7 @@ export const GoogleTokens = db.collection('google-tokens');
 export const GoogleFoodPhotos = db.collection('google-food-photos');
 export const FitbitTokens = db.collection('fitbit-tokens');
 export const FitbitActivities = db.collection('fitbit-activities');
+export const FitbitSleeps = db.collection('fitbit-sleeps');
 export const AnimeWatchRecords = db.collection('anime-watch-records');
 export const States = db.collection('states');
 
