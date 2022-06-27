@@ -88,13 +88,12 @@ export const exercisePostCronJob = pubsub.schedule('every 1 minutes').onRun(asyn
 			const averageHeartRate = activityDoc.get('averageHeartRate');
 
 			await slack.chat.postMessage({
-				username: 'hakatashi',
-				icon_emoji: ':hakatashi:',
+				as_user: true,
+				channel: FITNESS_ID,
 				text: stripIndent`
 					:exercise-done: エアロバイク${exerciseMinutes}分 (:fire:${calories}kcal :bicyclist:${distance}km :heartbeat:${averageHeartRate}bpm)
 					${animeInfo}
 				`,
-				channel: FITNESS_ID,
 			});
 
 			await activityDoc.ref.set({isPosted: true}, {merge: true});
