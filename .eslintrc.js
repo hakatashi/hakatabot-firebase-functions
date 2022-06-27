@@ -7,5 +7,6 @@ module.exports = {
 		'no-dupe-class-members': 'off',
 		'import/default': 'off',
 		'import/no-namespace': 'off',
+		'@typescript-eslint/ban-ts-comment': 'off',
 	},
 };

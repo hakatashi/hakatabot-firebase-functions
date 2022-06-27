@@ -190,8 +190,8 @@ eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
 });
 
 // What's wrong?
-eventAdapter.constructor.prototype.emit = async function (eventName: string, event: any, respond: Function) {
-	for (const listener of this.listeners(eventName) as Function[]) {
+eventAdapter.constructor.prototype.emit = async function (eventName: string, event: any, respond: () => void) {
+	for (const listener of this.listeners(eventName) as ((ev: any) => Promise<any>)[]) {
 		await listener.call(this, event);
 	}
 	respond();
