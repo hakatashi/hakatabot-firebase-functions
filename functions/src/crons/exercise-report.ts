@@ -70,7 +70,7 @@ export const exercisePostCronJob = pubsub.schedule('every 1 minutes').onRun(asyn
 				// eslint-disable-next-line prefer-destructuring
 				const record = animeWatchRecord.docs[0];
 				const date = record.get('date');
-				if (date >= now - 15 * 60 * 1000) {
+				if (date >= now - 60 * 60 * 1000) {
 					const animeName = record.get('name');
 					const animePart = record.get('part');
 					const animePartId = record.get('partId');
