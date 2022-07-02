@@ -90,6 +90,8 @@ export const exercisePostCronJob = pubsub.schedule('every 1 minutes').onRun(asyn
 			await slack.chat.postMessage({
 				as_user: true,
 				channel: FITNESS_ID,
+				unfurl_links: false,
+				unfurl_media: false,
 				text: stripIndent`
 					:exercise-done: エアロバイク${exerciseMinutes}分 (:fire:${calories}kcal :bicyclist:${distance}km :heartbeat:${averageHeartRate}bpm)
 					${animeInfo}
