@@ -3,8 +3,9 @@ import {WebClient} from '@slack/web-api';
 import type {WebAPICallResult, MessageAttachment, KnownBlock} from '@slack/web-api';
 import download from 'download';
 import {https, logger, config as getConfig} from 'firebase-functions';
-import {HAKATASHI_ID, SATOS_ID, SANDBOX_ID} from './const';
+import {HAKATASHI_ID, SATOS_ID, SANDBOX_ID, TSG_SLACKBOT_ID} from './const';
 import twitter from './twitter';
+import {sample} from 'lodash';
 
 interface ReactionAddedEvent {
 	type: 'reaction_added',
@@ -47,6 +48,7 @@ export interface Message {
 	files?: File[],
 	reactions?: Reaction[],
 	blocks?: KnownBlock[],
+	bot_id?: string,
 }
 
 export interface GetMessagesResult extends WebAPICallResult {
@@ -87,6 +89,7 @@ const unescapeSlackComponent = (text: string) => (
 		.replace(/&amp;/g, '&')
 );
 
+// Slack-Twitter tunnel
 eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
 	if (event.item.type === 'message') {
 		const account = getTwitterAccount(event.reaction);
@@ -186,6 +189,81 @@ eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
 		} catch (error) {
 			logger.error('Tweet errored', error);
 		}
+	}
+});
+
+// Wakaran-penalty
+eventAdapter.on('message', async (message: Message) => {
+	if (
+		message.subtype === 'bot_message' &&
+		message.bot_id === TSG_SLACKBOT_ID &&
+		message.username === '通りすがりに context free bot の解説をしてくれるおじさん' &&
+		message.text.endsWith('わからん')
+	) {
+		const message = sample([
+			'チンイツクイズ',
+			'チンイツクイズhard',
+			'ポッキーゲーム',
+			'将棋',
+			'15手必勝将棋',
+			'たほいや',
+			'素数大富豪',
+			'今何時？',
+			'あほくさスライドパズル',
+			'寿司スライドパズル',
+			'寿司スライドパズル 6',
+			'千矢スライドパズル',
+			'ベイビーロボット 1000手',
+			'スーパーロボット 1000手',
+			'ハイパーロボット 1000手',
+			'ベイビーロボットバトル',
+			'スーパーロボットバトル',
+			'ハイパーロボットバトル',
+			'wordhero',
+			'hardhero',
+			'crossword',
+			'grossword',
+			'ボイパーロボット',
+			'ボイパーロボット100',
+			'ボイパーロボットバトル',
+			'ボイパーロボットバトル100',
+			'デニム',
+			'おみくじ',
+			'ぽんぺ出題',
+			'アニメ当てクイズ',
+			'アニメ当てクイズeasy',
+			'アニメ当てクイズhard',
+			'アニメ当てクイズextreme',
+			'アニソン当てクイズ',
+			'アニソン当てクイズeasy',
+			'アニソン当てクイズhard',
+			'キャラ当てクイズ',
+			'ソートなぞなぞ',
+			'ソートなぞなぞ 20字',
+			'@cfb',
+			'物件ガチャ',
+			'物件ガチャ 東京都',
+			'早押しクイズ',
+			'早押しクイズhard',
+			'hitandblow',
+			'hitandblow 10',
+			'octas',
+			'hangman',
+			'hangman easy',
+			'hangman hard',
+			'hangman extreme',
+			'きらファン当てクイズ',
+			'文豪クイズ',
+			'文豪当てクイズ',
+			'ダーツの旅',
+			'ダーツの旅 東京都',
+		]);
+
+		await slack.chat.postMessage({
+			as_user: true,
+			channel: SANDBOX_ID,
+			text: message,
+		});
 	}
 });
 
