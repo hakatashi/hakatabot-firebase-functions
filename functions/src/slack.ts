@@ -3,9 +3,9 @@ import {WebClient} from '@slack/web-api';
 import type {WebAPICallResult, MessageAttachment, KnownBlock} from '@slack/web-api';
 import download from 'download';
 import {https, logger, config as getConfig} from 'firebase-functions';
+import {sample} from 'lodash';
 import {HAKATASHI_ID, SATOS_ID, SANDBOX_ID, TSG_SLACKBOT_ID} from './const';
 import twitter from './twitter';
-import {sample} from 'lodash';
 
 interface ReactionAddedEvent {
 	type: 'reaction_added',
@@ -200,7 +200,7 @@ eventAdapter.on('message', async (message: Message) => {
 		message.username === '通りすがりに context free bot の解説をしてくれるおじさん' &&
 		message.text.endsWith('わからん')
 	) {
-		const message = sample([
+		const text = sample([
 			'チンイツクイズ',
 			'チンイツクイズhard',
 			'ポッキーゲーム',
@@ -262,7 +262,7 @@ eventAdapter.on('message', async (message: Message) => {
 		await slack.chat.postMessage({
 			as_user: true,
 			channel: SANDBOX_ID,
-			text: message,
+			text,
 		});
 	}
 });
