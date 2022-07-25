@@ -4,7 +4,7 @@ import type {WebAPICallResult, MessageAttachment, KnownBlock} from '@slack/web-a
 import download from 'download';
 import {https, logger, config as getConfig} from 'firebase-functions';
 import {sample} from 'lodash';
-import {HAKATASHI_ID, SATOS_ID, SANDBOX_ID, TSG_SLACKBOT_ID} from './const';
+import {HAKATASHI_ID, SATOS_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID} from './const';
 import twitter from './twitter';
 
 interface ReactionAddedEvent {
@@ -42,6 +42,7 @@ export interface Message {
 	subtype: string,
 	text: string,
 	ts: string,
+	channel: string,
 	user: string,
 	username: string,
 	attachments?: Attachment[],
@@ -263,6 +264,21 @@ eventAdapter.on('message', async (message: Message) => {
 			as_user: true,
 			channel: SANDBOX_ID,
 			text,
+		});
+	}
+});
+
+// No-Events canceller
+eventAdapter.on('message', async (message: Message) => {
+	if (
+		message.subtype === 'bot_message' &&
+		message.channel === RANDOM_ID &&
+		message.username === 'TSG' &&
+		message.text === 'There are no events today'
+	) {
+		await slack.chat.delete({
+			channel: message.channel,
+			ts: message.ts,
 		});
 	}
 });
