@@ -258,6 +258,8 @@ eventAdapter.on('message', async (message: Message) => {
 			'文豪当てクイズ',
 			'ダーツの旅',
 			'ダーツの旅 東京都',
+			'実績当てクイズ',
+			'和同開珎',
 		]);
 
 		await slack.chat.postMessage({
