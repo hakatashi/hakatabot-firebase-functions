@@ -7,6 +7,7 @@ import {oauth2Client} from './google';
 
 export {slackEvent} from './slack';
 export * from './crons';
+export * from './api';
 
 const oauth2 = google.oauth2('v2');
 
