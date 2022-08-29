@@ -7,6 +7,7 @@ import {oauth2Client} from './google';
 
 export {slackEvent} from './slack';
 export * from './crons';
+export * from './api';
 
 const oauth2 = google.oauth2('v2');
 
@@ -17,6 +18,7 @@ export const authenticateGoogleApi = https.onRequest((request, response) => {
 			'https://www.googleapis.com/auth/photoslibrary',
 			'https://www.googleapis.com/auth/userinfo.email',
 			'https://www.googleapis.com/auth/userinfo.profile',
+			'https://www.googleapis.com/auth/youtube.readonly',
 		],
 	});
 	response.redirect(url);
