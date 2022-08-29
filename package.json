@@ -24,7 +24,9 @@
     "dev": "firebase emulators:start --export-on-exit db --import db",
     "install": "cd functions && npm install",
     "lint": "npm --prefix functions run lint",
-    "build": "npm --prefix functions run build"
+    "lint:fix": "npm --prefix functions run lint:fix",
+    "build": "npm --prefix functions run build",
+    "build:watch": "npm --prefix functions run build:watch"
   },
   "repository": {
     "type": "git",

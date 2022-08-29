@@ -11,7 +11,7 @@
 ```
 firebase functions:config:get > functions/.runtimeconfig.json
 firebase functions:shell
-npm run build -- -- --watch
+npm run build:watch
 ```
 
 ## Deploy
