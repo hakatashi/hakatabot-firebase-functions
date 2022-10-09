@@ -319,9 +319,9 @@ eventAdapter.on('message', async (message: Message) => {
 	const newHumanMessages = recentHumanMessages.filter((m) => parseFloat(m.ts) > threshold);
 
 	if (
-		newBotMessages.length >= 10 &&
+		newHumanMessages.length >= 5 &&
 		newBotMessages.length <= newHumanMessages.length / 2 &&
-		new Set(newHumanMessages.map(({user}) => user)).size >= 3 &&
+		new Set(newHumanMessages.map(({user}) => user)).size >= 2 &&
 		ts >= lastSignal - 5 * 60 * 1000
 	) {
 		// signal it
