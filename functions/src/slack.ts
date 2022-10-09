@@ -315,8 +315,8 @@ eventAdapter.on('message', async (message: Message) => {
 		recentHumanMessages.push(message);
 	}
 
-	const newBotMessages = recentBotMessages.filter(({ts}) => parseFloat(ts) > threshold);
-	const newHumanMessages = recentHumanMessages.filter(({ts}) => parseFloat(ts) > threshold);
+	const newBotMessages = recentBotMessages.filter((m) => parseFloat(m.ts) > threshold);
+	const newHumanMessages = recentHumanMessages.filter((m) => parseFloat(m.ts) > threshold);
 
 	if (
 		newBotMessages.length >= 10 &&
