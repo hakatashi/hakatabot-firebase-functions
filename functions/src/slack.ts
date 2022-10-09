@@ -5,6 +5,7 @@ import download from 'download';
 import {https, logger, config as getConfig} from 'firebase-functions';
 import {sample} from 'lodash';
 import {HAKATASHI_ID, SATOS_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID} from './const';
+import {State} from './firestore';
 import twitter from './twitter';
 
 interface ReactionAddedEvent {
@@ -50,6 +51,7 @@ export interface Message {
 	reactions?: Reaction[],
 	blocks?: KnownBlock[],
 	bot_id?: string,
+	thread_ts?: string,
 }
 
 export interface GetMessagesResult extends WebAPICallResult {
@@ -283,6 +285,56 @@ eventAdapter.on('message', async (message: Message) => {
 			ts: message.ts,
 		});
 	}
+});
+
+// Rinna signal
+eventAdapter.on('message', async (message: Message) => {
+	const now = Date.now() / 1000;
+	const threshold = now - 5 * 60;
+
+	if (
+		message.channel !== SANDBOX_ID ||
+		typeof message.thread_ts === 'string'
+	) {
+		return;
+	}
+
+	const state = new State('slack-rinna-signal');
+	const recentBotMessages = await state.get<Message[]>('recentBotMessages', []);
+	const recentHumanMessages = await state.get<Message[]>('recentHumanMessages', []);
+	const lastSignal = await state.get<number>('lastSignal', 0);
+
+	const ts = parseFloat(message.ts);
+
+	if (
+		message.subtype === 'bot_message' ||
+		typeof message.bot_id === 'string'
+	) {
+		recentBotMessages.push(message);
+	} else {
+		recentHumanMessages.push(message);
+	}
+
+	const newBotMessages = recentBotMessages.filter(({ts}) => parseFloat(ts) > threshold);
+	const newHumanMessages = recentHumanMessages.filter(({ts}) => parseFloat(ts) > threshold);
+
+	if (
+		newBotMessages.length >= 10 &&
+		newBotMessages.length <= newHumanMessages.length / 2 &&
+		new Set(newHumanMessages.map(({user}) => user)).size >= 3 &&
+		ts >= lastSignal - 5 * 60 * 1000
+	) {
+		// signal it
+		logger.log(`rinna-signal: Signal triggered on ${ts}`);
+		await state.set({
+			lastSignal: ts,
+		});
+	}
+
+	await state.set({
+		recentBotMessages: newBotMessages,
+		recentHumanMessages: newHumanMessages,
+	});
 });
 
 // What's wrong?
