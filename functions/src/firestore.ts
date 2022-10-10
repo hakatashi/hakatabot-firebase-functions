@@ -30,7 +30,7 @@ export class State {
 	async get<T>(name: string, defaultValue?: T): Promise<T | undefined> {
 		const data = await this.doc.get();
 		if (data.exists) {
-			return data.get(name);
+			return data.get(name) ?? defaultValue;
 		}
 		if (defaultValue !== undefined) {
 			return defaultValue;
