@@ -52,6 +52,7 @@ export interface Message {
 	blocks?: KnownBlock[],
 	bot_id?: string,
 	thread_ts?: string,
+	hidden?: true,
 }
 
 export interface GetMessagesResult extends WebAPICallResult {
@@ -295,7 +296,7 @@ eventAdapter.on('message', async (message: Message) => {
 	if (
 		message.channel !== SANDBOX_ID ||
 		typeof message.thread_ts === 'string' ||
-		typeof message.subtype === 'undefined'
+		message.hidden
 	) {
 		return;
 	}
