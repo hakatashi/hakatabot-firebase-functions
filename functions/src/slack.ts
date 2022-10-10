@@ -292,6 +292,7 @@ eventAdapter.on('message', async (message: Message) => {
 eventAdapter.on('message', async (message: Message) => {
 	const now = Date.now() / 1000;
 	const threshold = now - 5 * 60;
+	logger.log(message);
 
 	if (
 		message.channel !== SANDBOX_ID ||
@@ -310,7 +311,8 @@ eventAdapter.on('message', async (message: Message) => {
 
 	if (
 		message.subtype === 'bot_message' ||
-		typeof message.bot_id === 'string'
+		typeof message.bot_id === 'string' ||
+		message.user === 'USLACKBOT'
 	) {
 		recentBotMessages.push(message);
 	} else {
