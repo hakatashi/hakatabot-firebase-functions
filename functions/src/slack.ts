@@ -294,7 +294,8 @@ eventAdapter.on('message', async (message: Message) => {
 
 	if (
 		message.channel !== SANDBOX_ID ||
-		typeof message.thread_ts === 'string'
+		typeof message.thread_ts === 'string' ||
+		typeof message.subtype === 'undefined'
 	) {
 		return;
 	}
