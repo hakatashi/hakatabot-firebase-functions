@@ -324,18 +324,6 @@ eventAdapter.on('message', async (message: Message) => {
 
 	const newBotMessages = recentBotMessages.filter((m) => parseFloat(m.ts) > threshold);
 	const newHumanMessages = recentHumanMessages.filter((m) => parseFloat(m.ts) > threshold);
-	logger.log(JSON.stringify({
-		newHumanMessages,
-		condition1: newHumanMessages.length >= 5,
-		newBotMessages,
-		condition2: newBotMessages.length <= newHumanMessages.length / 2,
-		newHumanMessagesUsers: Array.from(new Set(newHumanMessages.map(({user}) => user))),
-		newHumanMessagesUsersSize: new Set(newHumanMessages.map(({user}) => user)).size,
-		condition3: new Set(newHumanMessages.map(({user}) => user)).size >= 2,
-		condition4: ts >= lastSignal - 5 * 60,
-		ts,
-		lastSignal,
-	}));
 
 	if (
 		newHumanMessages.length >= 5 &&
