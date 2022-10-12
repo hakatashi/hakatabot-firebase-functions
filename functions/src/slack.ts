@@ -1,3 +1,4 @@
+import {PubSub} from '@google-cloud/pubsub';
 import {createEventAdapter} from '@slack/events-api';
 import {WebClient} from '@slack/web-api';
 import type {WebAPICallResult, MessageAttachment, KnownBlock} from '@slack/web-api';
@@ -7,6 +8,8 @@ import {sample} from 'lodash';
 import {HAKATASHI_ID, SATOS_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID} from './const';
 import {db, States} from './firestore';
 import twitter from './twitter';
+
+const pubsubClient = new PubSub();
 
 interface ReactionAddedEvent {
 	type: 'reaction_added',
@@ -333,8 +336,17 @@ eventAdapter.on('message', async (message: Message) => {
 			new Set(newHumanMessages.map(({user}) => user)).size >= 2 &&
 			ts >= lastSignal - 5 * 60
 		) {
-			// signal it
 			logger.log(`rinna-signal: Signal triggered on ${ts} (lastSignal = ${lastSignal})`);
+
+			await pubsubClient
+				.topic('hakatabot')
+				.publishMessage({
+					data: Buffer.from(JSON.stringify({
+						botMessages: newBotMessages,
+						humanMessages: newHumanMessages,
+					})),
+				});
+
 			transaction.set(state.ref, {
 				lastSignal: ts,
 			}, {merge: true});
