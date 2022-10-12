@@ -5,7 +5,7 @@ import download from 'download';
 import {https, logger, config as getConfig} from 'firebase-functions';
 import {sample} from 'lodash';
 import {HAKATASHI_ID, SATOS_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID} from './const';
-import {State} from './firestore';
+import {db, States} from './firestore';
 import twitter from './twitter';
 
 interface ReactionAddedEvent {
@@ -266,6 +266,7 @@ eventAdapter.on('message', async (message: Message) => {
 			'wordle battle',
 			'wordle battle 15',
 			'座標当て',
+			'座標当て 0.1',
 		]);
 
 		await slack.chat.postMessage({
@@ -305,42 +306,44 @@ eventAdapter.on('message', async (message: Message) => {
 		return;
 	}
 
-	const state = new State('slack-rinna-signal');
-	const recentBotMessages = await state.get<Message[]>('recentBotMessages', []);
-	const recentHumanMessages = await state.get<Message[]>('recentHumanMessages', []);
-	const lastSignal = await state.get<number>('lastSignal', 0);
+	await db.runTransaction(async (transaction) => {
+		const state = await transaction.get(States.doc('slack-rinna-signal'));
+		const recentBotMessages = (await state.get('recentBotMessages') as Message[]) ?? [];
+		const recentHumanMessages = (await state.get('recentHumanMessages') as Message[]) ?? [];
+		const lastSignal = (await state.get('lastSignal') as number) ?? 0;
 
-	const ts = parseFloat(message.ts);
+		const ts = parseFloat(message.ts);
 
-	if (
-		message.subtype === 'bot_message' ||
-		typeof message.bot_id === 'string' ||
-		message.user === 'USLACKBOT'
-	) {
-		recentBotMessages.push(message);
-	} else {
-		recentHumanMessages.push(message);
-	}
+		if (
+			message.subtype === 'bot_message' ||
+			typeof message.bot_id === 'string' ||
+			message.user === 'USLACKBOT'
+		) {
+			recentBotMessages.push(message);
+		} else {
+			recentHumanMessages.push(message);
+		}
 
-	const newBotMessages = recentBotMessages.filter((m) => parseFloat(m.ts) > threshold);
-	const newHumanMessages = recentHumanMessages.filter((m) => parseFloat(m.ts) > threshold);
+		const newBotMessages = recentBotMessages.filter((m) => parseFloat(m.ts) > threshold);
+		const newHumanMessages = recentHumanMessages.filter((m) => parseFloat(m.ts) > threshold);
 
-	if (
-		newHumanMessages.length >= 5 &&
-		newBotMessages.length <= newHumanMessages.length / 2 &&
-		new Set(newHumanMessages.map(({user}) => user)).size >= 2 &&
-		ts >= lastSignal - 5 * 60
-	) {
-		// signal it
-		logger.log(`rinna-signal: Signal triggered on ${ts}`);
-		await state.set({
-			lastSignal: ts,
-		});
-	}
+		if (
+			newHumanMessages.length >= 5 &&
+			newBotMessages.length <= newHumanMessages.length / 2 &&
+			new Set(newHumanMessages.map(({user}) => user)).size >= 2 &&
+			ts >= lastSignal - 5 * 60
+		) {
+			// signal it
+			logger.log(`rinna-signal: Signal triggered on ${ts}`);
+			transaction.set(state.ref, {
+				lastSignal: ts,
+			}, {merge: true});
+		}
 
-	await state.set({
-		recentBotMessages: newBotMessages,
-		recentHumanMessages: newHumanMessages,
+		transaction.set(state.ref, {
+			recentBotMessages: newBotMessages,
+			recentHumanMessages: newHumanMessages,
+		}, {merge: true});
 	});
 });
 
