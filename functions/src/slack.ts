@@ -344,6 +344,7 @@ eventAdapter.on('message', async (message: Message) => {
 					data: Buffer.from(JSON.stringify({
 						botMessages: newBotMessages,
 						humanMessages: newHumanMessages,
+						lastSignal,
 					})),
 				});
 
