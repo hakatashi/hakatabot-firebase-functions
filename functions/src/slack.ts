@@ -334,7 +334,7 @@ eventAdapter.on('message', async (message: Message) => {
 			ts >= lastSignal - 5 * 60
 		) {
 			// signal it
-			logger.log(`rinna-signal: Signal triggered on ${ts}`);
+			logger.log(`rinna-signal: Signal triggered on ${ts} (lastSignal = ${lastSignal})`);
 			transaction.set(state.ref, {
 				lastSignal: ts,
 			}, {merge: true});
