@@ -1,3 +1,4 @@
+import {PubSub} from '@google-cloud/pubsub';
 import {createEventAdapter} from '@slack/events-api';
 import {WebClient} from '@slack/web-api';
 import type {WebAPICallResult, MessageAttachment, KnownBlock} from '@slack/web-api';
@@ -5,8 +6,10 @@ import download from 'download';
 import {https, logger, config as getConfig} from 'firebase-functions';
 import {sample} from 'lodash';
 import {HAKATASHI_ID, SATOS_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID} from './const';
-import {State} from './firestore';
+import {db, States} from './firestore';
 import twitter from './twitter';
+
+const pubsubClient = new PubSub();
 
 interface ReactionAddedEvent {
 	type: 'reaction_added',
@@ -263,6 +266,10 @@ eventAdapter.on('message', async (message: Message) => {
 			'ダーツの旅 東京都',
 			'実績当てクイズ',
 			'和同開珎',
+			'wordle battle',
+			'wordle battle 15',
+			'座標当て',
+			'座標当て 0.1',
 		]);
 
 		await slack.chat.postMessage({
@@ -302,54 +309,54 @@ eventAdapter.on('message', async (message: Message) => {
 		return;
 	}
 
-	const state = new State('slack-rinna-signal');
-	const recentBotMessages = await state.get<Message[]>('recentBotMessages', []);
-	const recentHumanMessages = await state.get<Message[]>('recentHumanMessages', []);
-	const lastSignal = await state.get<number>('lastSignal', 0);
+	await db.runTransaction(async (transaction) => {
+		const state = await transaction.get(States.doc('slack-rinna-signal'));
+		const recentBotMessages = (await state.get('recentBotMessages') as Message[]) ?? [];
+		const recentHumanMessages = (await state.get('recentHumanMessages') as Message[]) ?? [];
+		const lastSignal = (await state.get('lastSignal') as number) ?? 0;
 
-	const ts = parseFloat(message.ts);
+		const ts = parseFloat(message.ts);
 
-	if (
-		message.subtype === 'bot_message' ||
-		typeof message.bot_id === 'string' ||
-		message.user === 'USLACKBOT'
-	) {
-		recentBotMessages.push(message);
-	} else {
-		recentHumanMessages.push(message);
-	}
+		if (
+			message.subtype === 'bot_message' ||
+			typeof message.bot_id === 'string' ||
+			message.user === 'USLACKBOT'
+		) {
+			recentBotMessages.push(message);
+		} else {
+			recentHumanMessages.push(message);
+		}
 
-	const newBotMessages = recentBotMessages.filter((m) => parseFloat(m.ts) > threshold);
-	const newHumanMessages = recentHumanMessages.filter((m) => parseFloat(m.ts) > threshold);
-	logger.log(JSON.stringify({
-		newHumanMessages,
-		condition1: newHumanMessages.length >= 5,
-		newBotMessages,
-		condition2: newBotMessages.length <= newHumanMessages.length / 2,
-		newHumanMessagesUsers: Array.from(new Set(newHumanMessages.map(({user}) => user))),
-		newHumanMessagesUsersSize: new Set(newHumanMessages.map(({user}) => user)).size,
-		condition3: new Set(newHumanMessages.map(({user}) => user)).size >= 2,
-		condition4: ts >= lastSignal - 5 * 60,
-		ts,
-		lastSignal,
-	}));
+		const newBotMessages = recentBotMessages.filter((m) => parseFloat(m.ts) > threshold);
+		const newHumanMessages = recentHumanMessages.filter((m) => parseFloat(m.ts) > threshold);
 
-	if (
-		newHumanMessages.length >= 5 &&
-		newBotMessages.length <= newHumanMessages.length / 2 &&
-		new Set(newHumanMessages.map(({user}) => user)).size >= 2 &&
-		ts >= lastSignal - 5 * 60
-	) {
-		// signal it
-		logger.log(`rinna-signal: Signal triggered on ${ts}`);
-		await state.set({
-			lastSignal: ts,
-		});
-	}
+		if (
+			newHumanMessages.length >= 5 &&
+			newBotMessages.length <= newHumanMessages.length / 2 &&
+			new Set(newHumanMessages.map(({user}) => user)).size >= 2 &&
+			ts >= lastSignal + 5 * 60
+		) {
+			logger.log(`rinna-signal: Signal triggered on ${ts} (lastSignal = ${lastSignal})`);
 
-	await state.set({
-		recentBotMessages: newBotMessages,
-		recentHumanMessages: newHumanMessages,
+			await pubsubClient
+				.topic('hakatabot')
+				.publishMessage({
+					data: Buffer.from(JSON.stringify({
+						botMessages: newBotMessages,
+						humanMessages: newHumanMessages,
+						lastSignal,
+					})),
+				});
+
+			transaction.set(state.ref, {
+				lastSignal: ts,
+			}, {merge: true});
+		}
+
+		transaction.set(state.ref, {
+			recentBotMessages: newBotMessages,
+			recentHumanMessages: newHumanMessages,
+		}, {merge: true});
 	});
 });
 
