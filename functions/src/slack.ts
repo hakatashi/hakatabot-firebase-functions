@@ -295,12 +295,53 @@ eventAdapter.on('message', async (message: Message) => {
 	}
 });
 
+const rinnaSignalBlockList = [
+	'わどう',
+	'和同',
+	'ソートなぞなぞ',
+	'ポッキーゲーム',
+	'すし',
+	'配牌',
+];
+
+const isRinnaSignalBlockList = (text: string) => {
+	if (rinnaSignalBlockList.includes(text)) {
+		return true;
+	}
+
+	if (text.endsWith('ロボット')) {
+		return true;
+	}
+
+	if (text.endsWith('ロボットバトル')) {
+		return true;
+	}
+
+	if (text.endsWith('スライドパズル')) {
+		return true;
+	}
+
+	if (text.endsWith('当てクイズ')) {
+		return true;
+	}
+
+	if (text.endsWith('占い')) {
+		return true;
+	}
+
+	if (text.startsWith('ハイパーロボット')) {
+		return true;
+	}
+
+	if (text.startsWith('座標当て')) {
+		return true;
+	}
+
+	return false;
+};
+
 // Rinna signal
 eventAdapter.on('message', async (message: Message) => {
-	const now = Date.now() / 1000;
-	const threshold = now - 5 * 60;
-	logger.log(message);
-
 	if (
 		message.channel !== SANDBOX_ID ||
 		typeof message.thread_ts === 'string' ||
@@ -316,12 +357,14 @@ eventAdapter.on('message', async (message: Message) => {
 		const lastSignal = (await state.get('lastSignal') as number) ?? 0;
 
 		const ts = parseFloat(message.ts);
+		const threshold = ts - 5 * 60;
 
 		if (
 			message.subtype === 'bot_message' ||
 			typeof message.bot_id === 'string' ||
 			message.user === 'USLACKBOT' ||
-			message.user === TSGBOT_ID
+			message.user === TSGBOT_ID ||
+			isRinnaSignalBlockList(message.text || '')
 		) {
 			recentBotMessages.push(message);
 		} else {
