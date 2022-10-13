@@ -5,7 +5,7 @@ import type {WebAPICallResult, MessageAttachment, KnownBlock} from '@slack/web-a
 import download from 'download';
 import {https, logger, config as getConfig} from 'firebase-functions';
 import {sample} from 'lodash';
-import {HAKATASHI_ID, SATOS_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID} from './const';
+import {HAKATASHI_ID, SATOS_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID, TSGBOT_ID} from './const';
 import {db, States} from './firestore';
 import twitter from './twitter';
 
@@ -320,7 +320,8 @@ eventAdapter.on('message', async (message: Message) => {
 		if (
 			message.subtype === 'bot_message' ||
 			typeof message.bot_id === 'string' ||
-			message.user === 'USLACKBOT'
+			message.user === 'USLACKBOT' ||
+			message.user === TSGBOT_ID
 		) {
 			recentBotMessages.push(message);
 		} else {
