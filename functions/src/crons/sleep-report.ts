@@ -1,4 +1,9 @@
+/* eslint-disable import/no-named-as-default-member */
+
 import axios from 'axios';
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
 import {logger, pubsub} from 'firebase-functions';
 import {get} from 'lodash';
 import {EXPIRATION_WINDOW_IN_SECONDS, HAKATASHI_EMAIL, SANDBOX_ID} from '../const';
@@ -6,7 +11,14 @@ import {FitbitSleeps, FitbitTokens} from '../firestore';
 import {client} from '../fitbit';
 import {webClient as slack} from '../slack';
 
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 export const sleepGetCronJob = pubsub.schedule('every 5 minutes').onRun(async () => {
+	if (dayjs().tz('Asia/Tokyo').hour() >= 10) {
+		return;
+	}
+
 	const hakatashiTokensData = await FitbitTokens.doc(HAKATASHI_EMAIL).get();
 
 	if (!hakatashiTokensData.exists) {
