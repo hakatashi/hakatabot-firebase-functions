@@ -333,7 +333,7 @@ const isRinnaSignalBlockList = (text: string) => {
 		return true;
 	}
 
-	if (text.startsWith('座標当て')) {
+	if (text.startsWith('座標')) {
 		return true;
 	}
 
