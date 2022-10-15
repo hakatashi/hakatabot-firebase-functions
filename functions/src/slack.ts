@@ -391,7 +391,8 @@ eventAdapter.on('message', async (message: Message) => {
 				newHumanMessages.length >= 5 &&
 				newBotMessages.length <= newHumanMessages.length / 2 &&
 				new Set(newHumanMessages.map(({user}) => user)).size >= 3 &&
-				ts >= lastSignal + 3 * 60
+				ts >= lastSignal + 30 * 60 &&
+				Math.random() < 0.3
 			)
 		) {
 			logger.log(`rinna-signal: Signal triggered on ${ts} (lastSignal = ${lastSignal})`);
