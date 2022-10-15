@@ -329,6 +329,10 @@ const isRinnaSignalBlockList = (text: string) => {
 		return true;
 	}
 
+	if (text.endsWith('将棋')) {
+		return true;
+	}
+
 	if (text.startsWith('ハイパーロボット')) {
 		return true;
 	}
