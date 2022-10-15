@@ -363,7 +363,9 @@ eventAdapter.on('message', async (message: Message) => {
 		const ts = parseFloat(message.ts);
 		const threshold = ts - 5 * 60;
 
-		if (
+		if (message.bot_id === TSG_SLACKBOT_ID && message.username === 'りんな') {
+			recentHumanMessages.push(message);
+		} else if (
 			message.subtype === 'bot_message' ||
 			typeof message.bot_id === 'string' ||
 			message.user === 'USLACKBOT' ||
