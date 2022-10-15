@@ -390,7 +390,7 @@ eventAdapter.on('message', async (message: Message) => {
 			(
 				newHumanMessages.length >= 5 &&
 				newBotMessages.length <= newHumanMessages.length / 2 &&
-				new Set(newHumanMessages.map(({user}) => user)).size >= 2 &&
+				new Set(newHumanMessages.map(({user}) => user)).size >= 3 &&
 				ts >= lastSignal + 3 * 60
 			)
 		) {
