@@ -363,6 +363,7 @@ eventAdapter.on('message', async (message: Message) => {
 		const ts = parseFloat(message.ts);
 		const threshold = ts - 5 * 60;
 
+		let isTrueHumanMessage = false;
 		if (message.bot_id === TSG_SLACKBOT_ID && message.username === 'りんな') {
 			recentHumanMessages.push(message);
 		} else if (
@@ -375,16 +376,23 @@ eventAdapter.on('message', async (message: Message) => {
 			recentBotMessages.push(message);
 		} else {
 			recentHumanMessages.push(message);
+			isTrueHumanMessage = true;
 		}
 
 		const newBotMessages = recentBotMessages.filter((m) => parseFloat(m.ts) > threshold);
 		const newHumanMessages = recentHumanMessages.filter((m) => parseFloat(m.ts) > threshold);
 
 		if (
-			newHumanMessages.length >= 5 &&
-			newBotMessages.length <= newHumanMessages.length / 2 &&
-			new Set(newHumanMessages.map(({user}) => user)).size >= 2 &&
-			ts >= lastSignal + 3 * 60
+			(
+				isTrueHumanMessage &&
+				(message.text || '').includes('りんな')
+			) ||
+			(
+				newHumanMessages.length >= 5 &&
+				newBotMessages.length <= newHumanMessages.length / 2 &&
+				new Set(newHumanMessages.map(({user}) => user)).size >= 2 &&
+				ts >= lastSignal + 3 * 60
+			)
 		) {
 			logger.log(`rinna-signal: Signal triggered on ${ts} (lastSignal = ${lastSignal})`);
 
