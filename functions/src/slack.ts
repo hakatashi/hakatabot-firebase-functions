@@ -364,7 +364,13 @@ eventAdapter.on('message', async (message: Message) => {
 		const threshold = ts - 5 * 60;
 
 		let isTrueHumanMessage = false;
-		if (message.bot_id === TSG_SLACKBOT_ID && message.username === 'りんな') {
+		if (
+			message.bot_id === TSG_SLACKBOT_ID &&
+			(
+				message.username === 'りんな' ||
+				message.username === '今言うな'
+			)
+		) {
 			recentHumanMessages.push(message);
 		} else if (
 			message.subtype === 'bot_message' ||
@@ -385,7 +391,10 @@ eventAdapter.on('message', async (message: Message) => {
 		if (
 			(
 				isTrueHumanMessage &&
-				(message.text || '').includes('りんな')
+				(
+					(message.text || '').includes('りんな') ||
+					(message.text || '').includes('うな')
+				)
 			) ||
 			(
 				newHumanMessages.length >= 5 &&
