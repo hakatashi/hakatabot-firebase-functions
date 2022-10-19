@@ -361,7 +361,7 @@ eventAdapter.on('message', async (message: Message) => {
 		const lastSignal = (await state.get('lastSignal') as number) ?? 0;
 
 		const ts = parseFloat(message.ts);
-		const threshold = ts - 5 * 60;
+		const threshold = ts - 15 * 60;
 
 		let isTrueHumanMessage = false;
 		if (
