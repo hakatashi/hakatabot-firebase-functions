@@ -383,7 +383,7 @@ eventAdapter.on('message', async (message: Message) => {
 
 			if (message.text === '@りんな optin') {
 				transaction.set(state.ref, {
-					optoutUsers: optoutUsers.map((user) => user !== message.user),
+					optoutUsers: optoutUsers.filter((user) => user === message.user),
 				}, {merge: true});
 
 				await slack.chat.postMessage({
