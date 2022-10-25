@@ -378,7 +378,10 @@ eventAdapter.on('message', async (message: Message) => {
 					ts: message.ts,
 					text: `<@${message.user}>をオプトアウトしました`,
 				});
-			} else if (message.text === '@りんな optin') {
+				return;
+			}
+
+			if (message.text === '@りんな optin') {
 				transaction.set(state.ref, {
 					optoutUsers: optoutUsers.map((user) => user !== message.user),
 				}, {merge: true});
@@ -390,6 +393,7 @@ eventAdapter.on('message', async (message: Message) => {
 					icon_url: 'https://hakata-public.s3.ap-northeast-1.amazonaws.com/slackbot/una_icon.png',
 					text: `にゃにゃにゃ! <@${message.user}>をオプトインしたにゃ!`,
 				});
+				return;
 			}
 		}
 
