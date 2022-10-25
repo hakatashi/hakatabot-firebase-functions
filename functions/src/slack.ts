@@ -356,9 +356,50 @@ eventAdapter.on('message', async (message: Message) => {
 
 	await db.runTransaction(async (transaction) => {
 		const state = await transaction.get(States.doc('slack-rinna-signal'));
-		const recentBotMessages = (await state.get('recentBotMessages') as Message[]) ?? [];
-		const recentHumanMessages = (await state.get('recentHumanMessages') as Message[]) ?? [];
-		const lastSignal = (await state.get('lastSignal') as number) ?? 0;
+		const recentBotMessages = (state.get('recentBotMessages') as Message[]) ?? [];
+		const recentHumanMessages = (state.get('recentHumanMessages') as Message[]) ?? [];
+		const lastSignal = (state.get('lastSignal') as number) ?? 0;
+		const optoutUsers = (state.get('optoutUsers') as string[]) ?? [];
+
+		if (
+			message.subtype !== 'bot_message' &&
+			typeof message.bot_id !== 'string' &&
+			message.user !== 'USLACKBOT' &&
+			message.user !== TSGBOT_ID
+		) {
+			if (message.text === '@りんな optout') {
+				optoutUsers.push(message.user);
+				transaction.set(state.ref, {
+					optoutUsers: Array.from(new Set(optoutUsers)),
+				}, {merge: true});
+
+				await slack.chat.postMessage({
+					channel: message.channel,
+					ts: message.ts,
+					text: `<@${message.user}>をオプトアウトしました`,
+				});
+			} else if (message.text === '@りんな optin') {
+				transaction.set(state.ref, {
+					optoutUsers: optoutUsers.map((user) => user !== message.user),
+				}, {merge: true});
+
+				await slack.chat.postMessage({
+					channel: message.channel,
+					ts: message.ts,
+					username: '今言うな',
+					icon_url: 'https://hakata-public.s3.ap-northeast-1.amazonaws.com/slackbot/una_icon.png',
+					text: `にゃにゃにゃ! <@${message.user}>をオプトインしたにゃ!`,
+				});
+			}
+		}
+
+		// optout
+		if (
+			typeof message.user === 'string' &&
+			optoutUsers.includes(message.user)
+		) {
+			return;
+		}
 
 		const ts = parseFloat(message.ts);
 		const threshold = ts - 15 * 60;
