@@ -56,6 +56,9 @@ export interface Message {
 	bot_id?: string,
 	thread_ts?: string,
 	hidden?: true,
+	icons?: {
+		emoji?: string,
+	},
 }
 
 export interface GetMessagesResult extends WebAPICallResult {
@@ -206,7 +209,7 @@ eventAdapter.on('message', async (message: Message) => {
 		message.bot_id === TSG_SLACKBOT_ID &&
 		message.username === '通りすがりに context free bot の解説をしてくれるおじさん' &&
 		message.text.endsWith('わからん') &&
-		message.icons.message === 'man_dancing_2'
+		message?.icons?.message === 'man_dancing_2'
 	) {
 		const text = sample([
 			'チンイツクイズ',
