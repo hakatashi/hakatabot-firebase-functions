@@ -363,7 +363,8 @@ eventAdapter.on('message', async (message: Message) => {
 			message.subtype !== 'bot_message' &&
 			typeof message.bot_id !== 'string' &&
 			message.user !== 'USLACKBOT' &&
-			message.user !== TSGBOT_ID
+			message.user !== TSGBOT_ID &&
+			message.icons.message === 'man_dancing_2'
 		) {
 			if (message.text === '@りんな optout') {
 				optoutUsers.push(message.user);
