@@ -205,7 +205,8 @@ eventAdapter.on('message', async (message: Message) => {
 		message.subtype === 'bot_message' &&
 		message.bot_id === TSG_SLACKBOT_ID &&
 		message.username === '通りすがりに context free bot の解説をしてくれるおじさん' &&
-		message.text.endsWith('わからん')
+		message.text.endsWith('わからん') &&
+		message.icons.message === 'man_dancing_2'
 	) {
 		const text = sample([
 			'チンイツクイズ',
@@ -363,8 +364,7 @@ eventAdapter.on('message', async (message: Message) => {
 			message.subtype !== 'bot_message' &&
 			typeof message.bot_id !== 'string' &&
 			message.user !== 'USLACKBOT' &&
-			message.user !== TSGBOT_ID &&
-			message.icons.message === 'man_dancing_2'
+			message.user !== TSGBOT_ID
 		) {
 			if (message.text === '@りんな optout') {
 				optoutUsers.push(message.user);
