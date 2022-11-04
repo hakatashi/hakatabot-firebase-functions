@@ -266,8 +266,6 @@ eventAdapter.on('message', async (message: Message) => {
 			'ダーツの旅 東京都',
 			'実績当てクイズ',
 			'和同開珎',
-			'wordle battle',
-			'wordle battle 15',
 			'座標当て',
 			'座標当て 0.1',
 		]);
