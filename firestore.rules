@@ -4,5 +4,10 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if false;
     }
+
+    match /vocaloid_quiz_answers/{answer} {
+      allow create: if true;
+      allow get, update, delete: if false;
+    }
   }
 }
