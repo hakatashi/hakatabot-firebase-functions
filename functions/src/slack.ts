@@ -478,7 +478,7 @@ eventAdapter.on('message', async (message: Message) => {
 
 // Rinna message information
 eventAdapter.on('message', async (message: Message) => {
-	logger.debug({message});
+	logger.debug(JSON.stringify(message));
 	if (
 		typeof message.thread_ts !== 'string' ||
 		message.text !== 'info' ||
@@ -490,11 +490,13 @@ eventAdapter.on('message', async (message: Message) => {
 	) {
 		return;
 	}
+	logger.debug('message passed');
 
 	const queryResult = await db.collection('rinna-messages')
 		.where('message.ts', '==', message.thread_ts)
 		.get();
 
+	logger.debug(`Query Result: ${queryResult.docs.length}`);
 	for (const doc of queryResult.docs) {
 		const inputDialog = doc.get('inputDialog') as string ?? '';
 		const outputSpeech = doc.get('outputSpeech') as string ?? '';
