@@ -490,13 +490,11 @@ eventAdapter.on('message', async (message: Message) => {
 	) {
 		return;
 	}
-	logger.debug('message passed');
 
 	const queryResult = await db.collection('rinna-responses')
 		.where('message.ts', '==', message.thread_ts)
 		.get();
 
-	logger.debug(`Query Result: ${queryResult.docs.length}`);
 	for (const doc of queryResult.docs) {
 		const inputDialog = doc.get('inputDialog') as string ?? '';
 		const outputSpeech = doc.get('outputSpeech') as string ?? '';
