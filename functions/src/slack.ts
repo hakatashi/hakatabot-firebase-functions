@@ -478,6 +478,7 @@ eventAdapter.on('message', async (message: Message) => {
 
 // Rinna message information
 eventAdapter.on('message', async (message: Message) => {
+	logger.debug({message});
 	if (
 		typeof message.thread_ts !== 'string' ||
 		message.text !== 'info' ||
