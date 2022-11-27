@@ -492,7 +492,7 @@ eventAdapter.on('message', async (message: Message) => {
 	}
 	logger.debug('message passed');
 
-	const queryResult = await db.collection('rinna-messages')
+	const queryResult = await db.collection('rinna-responses')
 		.where('message.ts', '==', message.thread_ts)
 		.get();
 
