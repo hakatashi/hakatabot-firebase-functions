@@ -2,6 +2,7 @@ import {PubSub} from '@google-cloud/pubsub';
 import {createEventAdapter} from '@slack/events-api';
 import {WebClient} from '@slack/web-api';
 import type {WebAPICallResult, MessageAttachment, KnownBlock} from '@slack/web-api';
+import {stripIndent} from 'common-tags';
 import download from 'download';
 import {https, logger, config as getConfig} from 'firebase-functions';
 import {sample} from 'lodash';
@@ -473,6 +474,59 @@ eventAdapter.on('message', async (message: Message) => {
 			recentHumanMessages: newHumanMessages,
 		}, {merge: true});
 	});
+});
+
+// Rinna message information
+eventAdapter.on('message', async (message: Message) => {
+	if (
+		typeof message.thread_ts !== 'string' ||
+		message.text !== 'info' ||
+		message.subtype === 'bot_message' ||
+		typeof message.bot_id === 'string' ||
+		message.user === 'USLACKBOT' ||
+		message.user === TSGBOT_ID ||
+		message.hidden
+	) {
+		return;
+	}
+
+	const queryResult = await db.collection('rinna-messages')
+		.where('message.ts', '==', message.thread_ts)
+		.get();
+
+	for (const doc of queryResult.docs) {
+		const inputDialog = doc.get('inputDialog') as string ?? '';
+		const outputSpeech = doc.get('outputSpeech') as string ?? '';
+		const output = doc.get('output') as string ?? '';
+		const character = doc.get('character') as string ?? '';
+
+		const tailText = output.split('」')[1] ?? '';
+
+		await slack.chat.postMessage({
+			channel: message.channel,
+			thread_ts: message.thread_ts,
+			username: 'GPT-2 Messaging Engine Service Rinna',
+			text: stripIndent`
+				Input:
+
+				\`\`\`
+				${inputDialog.trim()}
+				\`\`\`
+
+				Result:
+
+				\`\`\`
+				${character}「${outputSpeech.trim()}」
+				\`\`\`
+
+				Continuation Text:
+
+				\`\`\`
+				${tailText.trim()}
+				\`\`\`
+			`,
+		});
+	}
 });
 
 // What's wrong?
