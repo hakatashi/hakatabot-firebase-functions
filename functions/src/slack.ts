@@ -509,19 +509,14 @@ eventAdapter.on('message', async (message: Message) => {
 			username: 'GPT-2 Messaging Engine Service Rinna',
 			text: stripIndents`
 				Input:
-
 				\`\`\`
 				${inputDialog.trim()}
 				\`\`\`
-
 				Result:
-
 				\`\`\`
 				${character}「${outputSpeech.trim()}」
 				\`\`\`
-
 				Continuation Text:
-
 				\`\`\`
 				${tailText.trim()}
 				\`\`\`
