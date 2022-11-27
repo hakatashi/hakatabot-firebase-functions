@@ -2,7 +2,7 @@ import {PubSub} from '@google-cloud/pubsub';
 import {createEventAdapter} from '@slack/events-api';
 import {WebClient} from '@slack/web-api';
 import type {WebAPICallResult, MessageAttachment, KnownBlock} from '@slack/web-api';
-import {stripIndent} from 'common-tags';
+import {stripIndents} from 'common-tags';
 import download from 'download';
 import {https, logger, config as getConfig} from 'firebase-functions';
 import {sample} from 'lodash';
@@ -509,7 +509,7 @@ eventAdapter.on('message', async (message: Message) => {
 			channel: message.channel,
 			thread_ts: message.thread_ts,
 			username: 'GPT-2 Messaging Engine Service Rinna',
-			text: stripIndent`
+			text: stripIndents`
 				Input:
 
 				\`\`\`
