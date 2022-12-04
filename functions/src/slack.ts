@@ -478,6 +478,18 @@ eventAdapter.on('message', async (message: Message) => {
 	});
 });
 
+interface Moderations {
+	google_language_service?: {
+		categories: {
+			confidence: number,
+			name: string,
+		}[],
+	},
+	azure_content_moderator?: {
+		terms?: unknown[],
+	},
+}
+
 // Rinna message information
 eventAdapter.on('message', async (message: Message) => {
 	if (
@@ -501,27 +513,53 @@ eventAdapter.on('message', async (message: Message) => {
 		const outputSpeech = doc.get('outputSpeech') as string ?? '';
 		const output = doc.get('output') as string ?? '';
 		const character = doc.get('character') as string ?? '';
+		const moderations = doc.get('moderations') as Moderations ?? {};
 
 		const tailText = output.split('」').slice(1).join('」');
+		let text = stripIndents`
+			Input:
+			\`\`\`
+			${inputDialog.trim()}
+			\`\`\`
+			Result:
+			\`\`\`
+			${character}「${outputSpeech.trim()}」
+			\`\`\`
+			Continuation Text:
+			\`\`\`
+			${tailText.trim()}
+			\`\`\`
+		`;
+
+		if (moderations.google_language_service) {
+			const isAdult = moderations.google_language_service.categories
+				.some((category) => category.name === '/Adult');
+			text += '\n';
+			text += [
+				`Google Moderation Result: ${isAdult ? 'NG' : 'OK'}`,
+				'```',
+				JSON.stringify(moderations.google_language_service.categories, null, '  '),
+				'```',
+			].join('\n');
+		}
+
+		if (moderations.azure_content_moderator) {
+			const terms = moderations.azure_content_moderator.terms ?? [];
+			const isOffensive = terms.length > 0;
+			text += '\n';
+			text += [
+				`Azure Moderation Result: ${isOffensive ? 'NG' : 'OK'}`,
+				'```',
+				JSON.stringify(moderations.azure_content_moderator.terms, null, '  '),
+				'```',
+			].join('\n');
+		}
 
 		await slack.chat.postMessage({
 			channel: message.channel,
 			thread_ts: message.thread_ts,
 			username: 'GPT-2 Messaging Engine Service Rinna',
-			text: stripIndents`
-				Input:
-				\`\`\`
-				${inputDialog.trim()}
-				\`\`\`
-				Result:
-				\`\`\`
-				${character}「${outputSpeech.trim()}」
-				\`\`\`
-				Continuation Text:
-				\`\`\`
-				${tailText.trim()}
-				\`\`\`
-			`,
+			text,
 		});
 	}
 });
