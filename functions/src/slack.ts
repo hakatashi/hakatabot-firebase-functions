@@ -550,7 +550,7 @@ eventAdapter.on('message', async (message: Message) => {
 			text += [
 				`Azure Moderation Result: ${isOffensive ? 'NG' : 'OK'}`,
 				'```',
-				JSON.stringify(moderations.azure_content_moderator.terms, null, '  '),
+				JSON.stringify(terms, null, '  '),
 				'```',
 			].join('\n');
 		}
