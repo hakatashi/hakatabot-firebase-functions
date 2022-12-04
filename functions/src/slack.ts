@@ -303,6 +303,7 @@ const rinnaSignalBlockList = [
 	'和同',
 	'ソートなぞなぞ',
 	'ポッキーゲーム',
+	'チンイツクイズ',
 	'すし',
 	'配牌',
 ];
@@ -352,6 +353,7 @@ eventAdapter.on('message', async (message: Message) => {
 	if (
 		message.channel !== SANDBOX_ID ||
 		typeof message.thread_ts === 'string' ||
+		(message.text ?? '').includes('CENSORED') ||
 		message.hidden
 	) {
 		return;
@@ -500,7 +502,7 @@ eventAdapter.on('message', async (message: Message) => {
 		const output = doc.get('output') as string ?? '';
 		const character = doc.get('character') as string ?? '';
 
-		const tailText = output.split('」')[1] ?? '';
+		const tailText = output.split('」').slice(1).join('」');
 
 		await slack.chat.postMessage({
 			channel: message.channel,
