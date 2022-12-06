@@ -354,6 +354,9 @@ const matchRinnaSignalText = (text: string) => {
 		return true;
 	}
 	for (const name of ['りんな', 'うな', 'うか', 'うの']) {
+		if (text.includes(`@${name}`)) {
+			return true;
+		}
 		if (text.startsWith(name) || text.endsWith(name)) {
 			return true;
 		}
