@@ -1,3 +1,4 @@
+import {match} from 'assert';
 import {PubSub} from '@google-cloud/pubsub';
 import {createEventAdapter} from '@slack/events-api';
 import {WebClient} from '@slack/web-api';
@@ -348,6 +349,21 @@ const isRinnaSignalBlockList = (text: string) => {
 	return false;
 };
 
+const matchRinnaSignalText = (text: string) => {
+	if (text.includes('今言うな') || text.includes('皿洗うか') || text.includes('皿洗うの')) {
+		return true;
+	}
+	for (const name of ['りんな', 'うな', 'うか', 'うの']) {
+		if (text.startsWith(name) || text.endsWith(name)) {
+			return true;
+		}
+		if (text.match(new RegExp(`${name}[はがのを]`))) {
+			return true;
+		}
+	}
+	return false;
+};
+
 // Rinna signal
 eventAdapter.on('message', async (message: Message) => {
 	if (
@@ -418,7 +434,9 @@ eventAdapter.on('message', async (message: Message) => {
 			message.bot_id === TSG_SLACKBOT_ID &&
 			(
 				message.username === 'りんな' ||
-				message.username === '今言うな'
+				message.username === '今言うな' ||
+				message.username === '皿洗うか' ||
+				message.username === '皿洗うの'
 			)
 		) {
 			recentHumanMessages.push(message);
@@ -427,7 +445,7 @@ eventAdapter.on('message', async (message: Message) => {
 			typeof message.bot_id === 'string' ||
 			message.user === 'USLACKBOT' ||
 			message.user === TSGBOT_ID ||
-			isRinnaSignalBlockList(message.text || '')
+			isRinnaSignalBlockList(message.text ?? '')
 		) {
 			recentBotMessages.push(message);
 		} else {
@@ -441,10 +459,7 @@ eventAdapter.on('message', async (message: Message) => {
 		if (
 			(
 				isTrueHumanMessage &&
-				(
-					(message.text || '').includes('りんな') ||
-					(message.text || '').includes('うな')
-				)
+				matchRinnaSignalText(message.text ?? '')
 			) ||
 			(
 				newHumanMessages.length >= 5 &&
