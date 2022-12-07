@@ -1,4 +1,3 @@
-import {match} from 'assert';
 import {PubSub} from '@google-cloud/pubsub';
 import {createEventAdapter} from '@slack/events-api';
 import {WebClient} from '@slack/web-api';
