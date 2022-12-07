@@ -350,7 +350,7 @@ const isRinnaSignalBlockList = (text: string) => {
 };
 
 const matchRinnaSignalText = (text: string) => {
-	if (text.includes('今言うな') || text.includes('皿洗うか') || text.includes('皿洗うの')) {
+	if (text.includes('今言うな') || text.includes('皿洗')) {
 		return true;
 	}
 	for (const name of ['りんな', 'うな', 'うか', 'うの']) {
