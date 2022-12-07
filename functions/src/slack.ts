@@ -173,7 +173,7 @@ eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
 		}
 
 		// Unescape
-		let text = message.text.replace(/<(?<component>.+?)>/g, (match, component) => {
+		let text = message.text.replace(/<(?<component>.+?)>/g, (_match, component) => {
 			const [info, displayText] = component.split('|');
 			if ((/^[@#!]/).test(info)) {
 				return '';
