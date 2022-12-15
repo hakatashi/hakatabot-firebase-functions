@@ -359,7 +359,7 @@ const matchRinnaSignalText = (text: string) => {
 		if (text.startsWith(name) || text.endsWith(name)) {
 			return true;
 		}
-		if (text.match(new RegExp(`${name}[はがのを]`))) {
+		if (name !== 'うか' && name !== 'うの' && text.match(new RegExp(`${name}[はがのを]`))) {
 			return true;
 		}
 	}
