@@ -36,9 +36,19 @@ export const fitbitLatestHeartBeatRate = https.onRequest(async (request, respons
 
 	const latestHeartrate = last(history);
 	if (!latestHeartrate) {
-		response.send('-');
+		response.json({
+			schemaVersion: 1,
+			label: 'Heart Beat',
+			message: '-',
+			color: 'orange',
+		});
 		return;
 	}
 
-	response.send(latestHeartrate.value.toString());
+	response.json({
+		schemaVersion: 1,
+		label: 'Heart Beat',
+		message: `${latestHeartrate.value} bpm`,
+		color: 'orange',
+	});
 });
