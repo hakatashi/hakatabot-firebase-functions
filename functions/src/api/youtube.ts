@@ -1,5 +1,3 @@
-
-
 import {https, logger} from 'firebase-functions';
 import {google} from 'googleapis';
 import {BILLBOARD_HOT100_ID, HAKATASHI_EMAIL} from '../const';

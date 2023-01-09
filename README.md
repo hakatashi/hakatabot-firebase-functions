@@ -8,15 +8,21 @@
 
 ## Debug
 
-```
+```sh
 firebase functions:config:get > functions/.runtimeconfig.json
+
+# For cron functions
 firebase functions:shell
+
+# For HTTP functions
+firebase emulators:start --only functions
+
 npm run build:watch
 ```
 
 ## Deploy
 
-```
+```sh
 firebase functions:config:set slack.signing_secret=$SLACK_SIGNING_SECRET
 firebase functions:config:set slack.token=$SLACK_TOKEN
 firebase deploy
