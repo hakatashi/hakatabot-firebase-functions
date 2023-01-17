@@ -7,7 +7,7 @@ import download from 'download';
 import {https, logger, config as getConfig} from 'firebase-functions';
 import {sample} from 'lodash';
 import {HAKATASHI_ID, SATOS_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID, TSGBOT_ID} from './const';
-import {db, States} from './firestore';
+import {db, State, States} from './firestore';
 import twitter from './twitter';
 
 const pubsubClient = new PubSub();
@@ -579,6 +579,41 @@ eventAdapter.on('message', async (message: Message) => {
 			text,
 		});
 	}
+});
+
+// FitBit optout
+eventAdapter.on('message', async (message: Message) => {
+	if (
+		!message.text.startsWith('fitbit opt') ||
+		message.subtype === 'bot_message' ||
+		typeof message.bot_id === 'string' ||
+		message.user === 'USLACKBOT' ||
+		message.user === TSGBOT_ID ||
+		message.hidden
+	) {
+		return;
+	}
+
+	const tokens = message.text.split(' ');
+	// eslint-disable-next-line prefer-destructuring
+	const operation = tokens[1];
+	const user = tokens.slice(2).join(' ');
+
+	const state = new State('sleep-battle-cron-job');
+	let optoutUsers = await state.get('optoutUsers', [] as string[]);
+	if (operation === 'optin') {
+		optoutUsers = optoutUsers.filter((u) => u !== user);
+	} else {
+		optoutUsers.push(user);
+	}
+
+	await state.set({optoutUsers});
+
+	await slack.reactions.add({
+		timestamp: message.ts,
+		channel: message.channel,
+		name: '+1',
+	});
 });
 
 // What's wrong?
