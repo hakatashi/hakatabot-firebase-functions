@@ -1,13 +1,13 @@
 import axios from 'axios';
 import {stripIndent} from 'common-tags';
 import {logger, pubsub} from 'firebase-functions';
-import {EXPIRATION_WINDOW_IN_SECONDS, FITNESS_ID, HAKATASHI_EMAIL} from '../const';
+import {EXPIRATION_WINDOW_IN_SECONDS, FITNESS_ID, HAKATASHI_FITBIT_ID} from '../const';
 import {AnimeWatchRecords, FitbitActivities, FitbitTokens} from '../firestore';
 import {client} from '../fitbit';
 import {webClient as slack} from '../slack';
 
 export const exerciseGetCronJob = pubsub.schedule('every 5 minutes').onRun(async () => {
-	const hakatashiTokensData = await FitbitTokens.doc(HAKATASHI_EMAIL).get();
+	const hakatashiTokensData = await FitbitTokens.doc(HAKATASHI_FITBIT_ID).get();
 
 	if (!hakatashiTokensData.exists) {
 		logger.error('hakatashi token not found');
@@ -22,7 +22,7 @@ export const exerciseGetCronJob = pubsub.schedule('every 5 minutes').onRun(async
 	if (accessToken.expired(EXPIRATION_WINDOW_IN_SECONDS)) {
 		logger.info('Refreshing token...');
 		accessToken = await accessToken.refresh();
-		await FitbitTokens.doc(HAKATASHI_EMAIL).set(accessToken.token, {merge: true});
+		await FitbitTokens.doc(HAKATASHI_FITBIT_ID).set(accessToken.token, {merge: true});
 	}
 
 	logger.info('Getting fitbit activities...');

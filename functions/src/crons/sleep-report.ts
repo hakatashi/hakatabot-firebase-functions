@@ -6,7 +6,7 @@ import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import {logger, pubsub} from 'firebase-functions';
 import {get} from 'lodash';
-import {EXPIRATION_WINDOW_IN_SECONDS, HAKATASHI_EMAIL, SANDBOX_ID} from '../const';
+import {EXPIRATION_WINDOW_IN_SECONDS, HAKATASHI_FITBIT_ID, SANDBOX_ID} from '../const';
 import {FitbitSleeps, FitbitTokens} from '../firestore';
 import {client} from '../fitbit';
 import {webClient as slack} from '../slack';
@@ -19,7 +19,7 @@ export const sleepGetCronJob = pubsub.schedule('every 5 minutes').onRun(async ()
 		return;
 	}
 
-	const hakatashiTokensData = await FitbitTokens.doc(HAKATASHI_EMAIL).get();
+	const hakatashiTokensData = await FitbitTokens.doc(HAKATASHI_FITBIT_ID).get();
 
 	if (!hakatashiTokensData.exists) {
 		logger.error('hakatashi token not found');
@@ -34,7 +34,7 @@ export const sleepGetCronJob = pubsub.schedule('every 5 minutes').onRun(async ()
 	if (accessToken.expired(EXPIRATION_WINDOW_IN_SECONDS)) {
 		logger.info('Refreshing token...');
 		accessToken = await accessToken.refresh();
-		await FitbitTokens.doc(HAKATASHI_EMAIL).set(accessToken.token, {merge: true});
+		await FitbitTokens.doc(HAKATASHI_FITBIT_ID).set(accessToken.token, {merge: true});
 	}
 
 	logger.info('Getting fitbit activities...');

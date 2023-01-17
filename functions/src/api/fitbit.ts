@@ -1,12 +1,12 @@
 import axios from 'axios';
 import {https, logger} from 'firebase-functions';
 import {get, last} from 'lodash';
-import {EXPIRATION_WINDOW_IN_SECONDS, HAKATASHI_EMAIL} from '../const';
+import {EXPIRATION_WINDOW_IN_SECONDS, HAKATASHI_FITBIT_ID} from '../const';
 import {FitbitTokens} from '../firestore';
 import {client} from '../fitbit';
 
 export const fitbitLatestHeartBeatRate = https.onRequest(async (request, response) => {
-	const hakatashiTokensData = await FitbitTokens.doc(HAKATASHI_EMAIL).get();
+	const hakatashiTokensData = await FitbitTokens.doc(HAKATASHI_FITBIT_ID).get();
 
 	if (!hakatashiTokensData.exists) {
 		logger.error('hakatashi token not found');
@@ -21,7 +21,7 @@ export const fitbitLatestHeartBeatRate = https.onRequest(async (request, respons
 	if (accessToken.expired(EXPIRATION_WINDOW_IN_SECONDS)) {
 		logger.info('Refreshing token...');
 		accessToken = await accessToken.refresh();
-		await FitbitTokens.doc(HAKATASHI_EMAIL).set(accessToken.token, {merge: true});
+		await FitbitTokens.doc(HAKATASHI_FITBIT_ID).set(accessToken.token, {merge: true});
 	}
 
 	logger.info('Getting fitbit heart rate history...');

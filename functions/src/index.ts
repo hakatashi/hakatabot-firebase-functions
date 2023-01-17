@@ -1,6 +1,5 @@
 import {https} from 'firebase-functions';
 import {google} from 'googleapis';
-import {HAKATASHI_EMAIL} from './const';
 import {GoogleTokens, FitbitTokens, AnimeWatchRecords} from './firestore';
 import {client as fitbitClient} from './fitbit';
 import {oauth2Client} from './google';
@@ -53,7 +52,7 @@ export const authenticateFitbitApi = https.onRequest((request, response) => {
 	} else if (typeof scopes === 'string') {
 		scopes = scopes.split(',');
 	} else if (!Array.isArray(scopes)) {
-		response.sendStatus(401);
+		response.sendStatus(400).end();
 		return;
 	}
 
@@ -77,7 +76,7 @@ export const fitbitApiOauthCallback = https.onRequest(async (request, response) 
 		redirect_uri: 'https://us-central1-hakatabot-firebase-functions.cloudfunctions.net/fitbitApiOauthCallback',
 	});
 
-	await FitbitTokens.doc(HAKATASHI_EMAIL).set(accessToken.token, {merge: true});
+	await FitbitTokens.doc(accessToken.token.user_id).set(accessToken.token, {merge: true});
 
 	response.send('ok');
 });
