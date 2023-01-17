@@ -4,7 +4,7 @@ import axios from 'axios';
 import dayjs from 'dayjs';
 import {logger, pubsub} from 'firebase-functions';
 import {EXPIRATION_WINDOW_IN_SECONDS, SANDBOX_ID} from '../const';
-import {FitbitTokens} from '../firestore';
+import {FitbitTokens, State} from '../firestore';
 import {client} from '../fitbit';
 import {webClient as slack} from '../slack';
 import sleepScorePredicter from './lib/sleep';
@@ -21,6 +21,9 @@ export const sleepBattleCronJob = pubsub
 	.schedule('0 12 * * *')
 	.timeZone('Asia/Tokyo')
 	.onRun(async () => {
+		const state = new State('sleep-battle-cron-job');
+		const optoutUsers = await state.get('optoutUsers', [] as string[]);
+
 		const fitbitTokens = await FitbitTokens.get();
 		const sleepScores = [] as Rank[];
 
@@ -43,6 +46,10 @@ export const sleepBattleCronJob = pubsub
 				},
 			});
 			const username = profileResponse?.data?.user?.displayName ?? 'No Name';
+
+			if (optoutUsers.includes(username)) {
+				continue;
+			}
 
 			logger.info('Getting fitbit activities...');
 			const sleepsResponse = await axios.get('https://api.fitbit.com/1.2/user/-/sleep/list.json', {

@@ -609,10 +609,10 @@ eventAdapter.on('message', async (message: Message) => {
 
 	await state.set({optoutUsers});
 
-	await slack.reactions.add({
-		timestamp: message.ts,
+	await slack.chat.postMessage({
 		channel: message.channel,
-		name: '+1',
+		as_user: true,
+		text: operation === 'optin' ? `${user} をオプトインしたよ` : `${user} をオプトアウトしたよ`,
 	});
 });
 
