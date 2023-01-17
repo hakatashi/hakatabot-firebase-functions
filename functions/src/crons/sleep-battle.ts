@@ -23,6 +23,12 @@ export const sleepBattleCronJob = pubsub
 	.onRun(async () => {
 		const state = new State('sleep-battle-cron-job');
 		const optoutUsers = await state.get('optoutUsers', [] as string[]);
+		const slackUsers = await state.get(
+			'slackUsers',
+			Object.create(null) as {[slackId: string]: string},
+		);
+
+		const slackUsersMap = new Map(Object.entries(slackUsers).map(([slackId, fitbitId]) => [fitbitId, slackId]));
 
 		const fitbitTokens = await FitbitTokens.get();
 		const sleepScores = [] as Rank[];
@@ -130,6 +136,13 @@ export const sleepBattleCronJob = pubsub
 			}
 		}
 
+		const getUsernameText = (username: string) => {
+			if (slackUsersMap.has(username)) {
+				return `<@${slackUsersMap.get(username)}>`;
+			}
+			return `＊${username}＊`;
+		};
+
 		await slack.chat.postMessage({
 			as_user: true,
 			channel: SANDBOX_ID,
@@ -148,8 +161,8 @@ export const sleepBattleCronJob = pubsub
 					text: {
 						type: 'mrkdwn',
 						text: sleep.score === null
-							? `${sleep.rank}位 ＊${sleep.username}＊\n起床失敗:cry:`
-							: `${sleep.rank}位 ＊${sleep.username}＊\n推定睡眠スコア: ${Math.round(sleep.score)}点\n起床時刻: ${sleep.wakeTime}`,
+							? `${sleep.rank}位 ${getUsernameText(sleep.username)}\n起床失敗:cry:`
+							: `${sleep.rank}位 ${getUsernameText(sleep.username)}\n推定睡眠スコア: ${Math.round(sleep.score)}点\n起床時刻: ${sleep.wakeTime}`,
 					},
 					accessory: {
 						type: 'image',

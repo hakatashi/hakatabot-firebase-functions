@@ -584,7 +584,7 @@ eventAdapter.on('message', async (message: Message) => {
 // FitBit optout
 eventAdapter.on('message', async (message: Message) => {
 	if (
-		!message.text.startsWith('fitbit opt') ||
+		!message.text.startsWith('fitbit ') ||
 		message.subtype === 'bot_message' ||
 		typeof message.bot_id === 'string' ||
 		message.user === 'USLACKBOT' ||
@@ -601,18 +601,31 @@ eventAdapter.on('message', async (message: Message) => {
 
 	const state = new State('sleep-battle-cron-job');
 	let optoutUsers = await state.get('optoutUsers', [] as string[]);
+	const slackUsers = await state.get('slackUsers', Object.create(null) as {[slackId: string]: string});
 	if (operation === 'optin') {
 		optoutUsers = optoutUsers.filter((u) => u !== user);
+	} else if (operation === 'id') {
+		slackUsers[message.user] = user;
 	} else {
 		optoutUsers.push(user);
 	}
 
-	await state.set({optoutUsers});
+	await state.set({optoutUsers, slackUsers});
+
+	const getNotificationText = () => {
+		if (operation === 'optin') {
+			return `${user} をオプトインしたよ`;
+		}
+		if (operation === 'id') {
+			return `<@${message.user}> の FitBit id を ${user} に設定したよ`;
+		}
+		return `${user} をオプトアウトしたよ`;
+	};
 
 	await slack.chat.postMessage({
 		channel: message.channel,
 		as_user: true,
-		text: operation === 'optin' ? `${user} をオプトインしたよ` : `${user} をオプトアウトしたよ`,
+		text: getNotificationText(),
 	});
 });
 
