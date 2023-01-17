@@ -604,10 +604,10 @@ eventAdapter.on('message', async (message: Message) => {
 	const slackUsers = await state.get('slackUsers', Object.create(null) as {[slackId: string]: string});
 	if (operation === 'optin') {
 		optoutUsers = optoutUsers.filter((u) => u !== user);
+	} else if (operation === 'optout') {
+		optoutUsers.push(user);
 	} else if (operation === 'id') {
 		slackUsers[message.user] = user;
-	} else {
-		optoutUsers.push(user);
 	}
 
 	await state.set({optoutUsers, slackUsers});
@@ -616,10 +616,13 @@ eventAdapter.on('message', async (message: Message) => {
 		if (operation === 'optin') {
 			return `${user} をオプトインしたよ`;
 		}
+		if (operation === 'optout') {
+			return `${user} をオプトアウトしたよ`;
+		}
 		if (operation === 'id') {
 			return `<@${message.user}> の FitBit id を ${user} に設定したよ`;
 		}
-		return `${user} をオプトアウトしたよ`;
+		return ':thinking_face:';
 	};
 
 	await slack.chat.postMessage({
