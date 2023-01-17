@@ -65,7 +65,7 @@ export const sleepBattleCronJob = pubsub
 			});
 
 			logger.info(`Retrieved ${sleepsResponse.data.sleep.length} sleeps by ${username}`);
-			const today = dayjs().tz('Asia/Tokyo').subtract(2, 'day');
+			const today = dayjs().tz('Asia/Tokyo');
 
 			const sleep = sleepsResponse.data.sleep.find((s: any) => {
 				const day = dayjs.tz(s.endTime, 'Asia/Tokyo');
