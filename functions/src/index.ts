@@ -46,9 +46,20 @@ export const googleApiOauthCallback = https.onRequest(async (request, response) 
 });
 
 export const authenticateFitbitApi = https.onRequest((request, response) => {
+	let scopes = request.query?.scopes;
+
+	if (scopes === undefined) {
+		scopes = ['sleep', 'settings', 'oxygen_saturation', 'respiratory_rate', 'profile', 'social', 'activity', 'weight', 'heartrate', 'nutrition', 'location'];
+	} else if (typeof scopes === 'string') {
+		scopes = scopes.split(',');
+	} else if (!Array.isArray(scopes)) {
+		response.sendStatus(401);
+		return;
+	}
+
 	const authorizationUri = fitbitClient.authorizeURL({
 		redirect_uri: 'https://us-central1-hakatabot-firebase-functions.cloudfunctions.net/fitbitApiOauthCallback',
-		scope: ['sleep', 'settings', 'oxygen_saturation', 'respiratory_rate', 'profile', 'social', 'activity', 'weight', 'heartrate', 'nutrition', 'location'],
+		scope: scopes.map((scope) => scope.toString()),
 	});
 
 	response.redirect(authorizationUri);
