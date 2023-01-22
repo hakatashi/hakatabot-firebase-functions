@@ -1,8 +1,10 @@
-import {config as getConfig} from 'firebase-functions';
+import axios from 'axios';
+import {config as getConfig, logger} from 'firebase-functions';
 import {AuthorizationCode} from 'simple-oauth2';
+import {EXPIRATION_WINDOW_IN_SECONDS, HAKATASHI_FITBIT_ID} from './const';
+import {FitbitTokens} from './firestore';
 
 const config = getConfig();
-
 
 export const client = new AuthorizationCode({
 	client: {
@@ -16,3 +18,34 @@ export const client = new AuthorizationCode({
 		authorizePath: '/oauth2/authorize',
 	},
 });
+
+export const get = async (path: string, params: any, userId: string = HAKATASHI_FITBIT_ID) => {
+	const hakatashiTokensData = await FitbitTokens.doc(userId).get();
+
+	if (!hakatashiTokensData.exists) {
+		throw new Error('hakatashi token not found');
+	}
+
+	const hakatashiTokens = hakatashiTokensData.data()!;
+	hakatashiTokens.expires_at = hakatashiTokens.expires_at.toDate();
+
+	let accessToken = client.createToken(hakatashiTokens as any);
+
+	if (accessToken.expired(EXPIRATION_WINDOW_IN_SECONDS)) {
+		logger.info('Refreshing token...');
+		accessToken = await accessToken.refresh();
+		await FitbitTokens.doc(userId).set(accessToken.token, {merge: true});
+	}
+
+	const url = new URL('https://api.fitbit.com/');
+	url.pathname = path;
+
+	const res = await axios.get(url.toString(), {
+		params,
+		headers: {
+			Authorization: `Bearer ${accessToken.token.access_token}`,
+		},
+	});
+
+	return res.data;
+};

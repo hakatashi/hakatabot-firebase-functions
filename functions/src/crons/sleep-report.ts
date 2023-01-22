@@ -1,14 +1,13 @@
 /* eslint-disable import/no-named-as-default-member */
 
-import axios from 'axios';
 import dayjs from 'dayjs';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import {logger, pubsub} from 'firebase-functions';
 import {get} from 'lodash';
-import {EXPIRATION_WINDOW_IN_SECONDS, HAKATASHI_FITBIT_ID, SANDBOX_ID} from '../const';
-import {FitbitSleeps, FitbitTokens} from '../firestore';
-import {client} from '../fitbit';
+import {SANDBOX_ID} from '../const';
+import {FitbitSleeps} from '../firestore';
+import * as fitbit from '../fitbit';
 import {webClient as slack} from '../slack';
 
 dayjs.extend(utc);
@@ -19,39 +18,16 @@ export const sleepGetCronJob = pubsub.schedule('every 5 minutes').onRun(async ()
 		return;
 	}
 
-	const hakatashiTokensData = await FitbitTokens.doc(HAKATASHI_FITBIT_ID).get();
-
-	if (!hakatashiTokensData.exists) {
-		logger.error('hakatashi token not found');
-		return;
-	}
-
-	const hakatashiTokens = hakatashiTokensData.data()!;
-	hakatashiTokens.expires_at = hakatashiTokens.expires_at.toDate();
-
-	let accessToken = client.createToken(hakatashiTokens as any);
-
-	if (accessToken.expired(EXPIRATION_WINDOW_IN_SECONDS)) {
-		logger.info('Refreshing token...');
-		accessToken = await accessToken.refresh();
-		await FitbitTokens.doc(HAKATASHI_FITBIT_ID).set(accessToken.token, {merge: true});
-	}
-
 	logger.info('Getting fitbit activities...');
-	const res = await axios.get('https://api.fitbit.com/1.2/user/-/sleep/list.json', {
-		params: {
-			beforeDate: '2100-01-01',
-			sort: 'desc',
-			limit: 100,
-			offset: 0,
-		},
-		headers: {
-			Authorization: `Bearer ${accessToken.token.access_token}`,
-		},
+	const res = await fitbit.get('/1.2/user/-/sleep/list.json', {
+		beforeDate: '2100-01-01',
+		sort: 'desc',
+		limit: 100,
+		offset: 0,
 	});
 
-	logger.info(`Retrieved ${res.data.sleep.length} sleeps`);
-	for (const sleep of res.data.sleep) {
+	logger.info(`Retrieved ${res.sleep.length} sleeps`);
+	for (const sleep of res.sleep) {
 		const key = sleep.logId.toString();
 		const doc = await FitbitSleeps.doc(key).get();
 		if (!doc.exists) {

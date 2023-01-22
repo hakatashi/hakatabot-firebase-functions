@@ -1,11 +1,10 @@
 /* eslint-disable import/no-named-as-default-member */
 
-import axios from 'axios';
 import dayjs from 'dayjs';
 import {logger, pubsub} from 'firebase-functions';
-import {EXPIRATION_WINDOW_IN_SECONDS, SANDBOX_ID} from '../const';
+import {SANDBOX_ID} from '../const';
 import {FitbitTokens, State} from '../firestore';
-import {client} from '../fitbit';
+import * as fitbit from '../fitbit';
 import {webClient as slack} from '../slack';
 import sleepScorePredicter from './lib/sleep';
 
@@ -34,46 +33,25 @@ export const sleepBattleCronJob = pubsub
 		const sleepScores = [] as Rank[];
 
 		for (const token of fitbitTokens.docs) {
-			const tokens = token.data();
-
-			tokens.expires_at = tokens.expires_at.toDate();
-
-			let accessToken = client.createToken(tokens as any);
-
-			if (accessToken.expired(EXPIRATION_WINDOW_IN_SECONDS)) {
-				logger.info('Refreshing token...');
-				accessToken = await accessToken.refresh();
-				await FitbitTokens.doc(tokens.user_id).set(accessToken.token, {merge: true});
-			}
-
-			const profileResponse = await axios.get('https://api.fitbit.com/1/user/-/profile.json', {
-				headers: {
-					Authorization: `Bearer ${accessToken.token.access_token}`,
-				},
-			});
-			const username = profileResponse?.data?.user?.displayName ?? 'No Name';
+			const profileResponse = await fitbit.get('/1/user/-/profile.json', {}, token.id);
+			const username = profileResponse?.user?.displayName ?? 'No Name';
 
 			if (optoutUsers.includes(username)) {
 				continue;
 			}
 
 			logger.info('Getting fitbit activities...');
-			const sleepsResponse = await axios.get('https://api.fitbit.com/1.2/user/-/sleep/list.json', {
-				params: {
-					beforeDate: '2100-01-01',
-					sort: 'desc',
-					limit: 100,
-					offset: 0,
-				},
-				headers: {
-					Authorization: `Bearer ${accessToken.token.access_token}`,
-				},
-			});
+			const sleepsResponse = await fitbit.get('/1.2/user/-/sleep/list.json', {
+				beforeDate: '2100-01-01',
+				sort: 'desc',
+				limit: 100,
+				offset: 0,
+			}, token.id);
 
-			logger.info(`Retrieved ${sleepsResponse.data.sleep.length} sleeps by ${username}`);
+			logger.info(`Retrieved ${sleepsResponse.sleep.length} sleeps by ${username}`);
 			const today = dayjs().tz('Asia/Tokyo');
 
-			const sleep = sleepsResponse.data.sleep.find((s: any) => {
+			const sleep = sleepsResponse.sleep.find((s: any) => {
 				const day = dayjs.tz(s.endTime, 'Asia/Tokyo');
 				return today.isSame(day, 'day') && s.isMainSleep;
 			});
@@ -81,7 +59,7 @@ export const sleepBattleCronJob = pubsub
 			if (!sleep) {
 				sleepScores.push({
 					username: username as string,
-					avatar: profileResponse?.data?.user?.avatar as string ?? '',
+					avatar: profileResponse?.user?.avatar as string ?? '',
 					score: null,
 					wakeTime: null,
 				});
@@ -107,7 +85,7 @@ export const sleepBattleCronJob = pubsub
 			const [score] = sleepScorePredicter.predict(data);
 			sleepScores.push({
 				username: username as string,
-				avatar: profileResponse?.data?.user?.avatar as string ?? '',
+				avatar: profileResponse?.user?.avatar as string ?? '',
 				score,
 				wakeTime: dayjs.tz(sleep.endTime, 'Asia/Tokyo').format('HH:mm'),
 			});
