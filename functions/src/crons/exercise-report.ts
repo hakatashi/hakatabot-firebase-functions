@@ -1,5 +1,7 @@
 import {stripIndent} from 'common-tags';
+import dayjs from 'dayjs';
 import {logger, pubsub} from 'firebase-functions';
+import {last} from 'lodash';
 import {FITNESS_ID} from '../const';
 import {AnimeWatchRecords, FitbitActivities} from '../firestore';
 import * as fitbit from '../fitbit';
@@ -58,10 +60,18 @@ export const exercisePostCronJob = pubsub.schedule('every 1 minutes').onRun(asyn
 				}
 			}
 
-			const exerciseMinutes = Math.floor(duration / 60 / 1000);
+			const today = dayjs().tz('Asia/Tokyo').format('YYYY-MM-DD');
+			const weightsResponse = await fitbit.get(`/1/user/-/body/log/weight/date/${today}/1m.json`, {});
+			const latestWeight = (last(weightsResponse?.weight ?? []) as any)?.weight;
+
+			const rawExerciseMinutes = duration / 60 / 1000;
+			const exerciseMinutes = Math.floor(rawExerciseMinutes);
 			const calories = activityDoc.get('calories');
 			const distance = (calories / 20).toFixed(2);
 			const averageHeartRate = activityDoc.get('averageHeartRate');
+
+			const mets = latestWeight ? calories / rawExerciseMinutes * 60 / latestWeight : null;
+			const metsString = mets ? ` [${mets.toFixed(2)}METs]` : '';
 
 			await slack.chat.postMessage({
 				as_user: true,
@@ -69,7 +79,7 @@ export const exercisePostCronJob = pubsub.schedule('every 1 minutes').onRun(asyn
 				unfurl_links: false,
 				unfurl_media: false,
 				text: stripIndent`
-					:exercise-done: エアロバイク${exerciseMinutes}分 (:fire:${calories}kcal :bicyclist:${distance}km :heartbeat:${averageHeartRate}bpm)
+					:exercise-done: エアロバイク${exerciseMinutes}分 (:fire:${calories}kcal${metsString} :bicyclist:${distance}km :heartbeat:${averageHeartRate}bpm)
 					${animeInfo}
 				`,
 			});
