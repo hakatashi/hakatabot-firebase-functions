@@ -130,6 +130,9 @@ export const sleepBattleCronJob = pubsub
 
 		let rank = 1;
 		for (const sleep of sleepScores) {
+			if (sleep.type !== 'user') {
+				continue;
+			}
 			sleep.rank = rank;
 			if (sleep.score !== null) {
 				rank++;
