@@ -8,13 +8,31 @@ import * as fitbit from '../fitbit';
 import {webClient as slack} from '../slack';
 import sleepScorePredicter from './lib/sleep';
 
-interface Rank {
+interface UserRank {
+	type: 'user',
 	username: string,
 	avatar: string,
 	score: number | null,
 	wakeTime: string | null,
 	rank?: number,
 }
+
+interface DividerRank {
+	type: 'divider',
+	score: number,
+}
+
+type Rank = UserRank | DividerRank;
+
+const getScoreEmoji = (score: number) => {
+	if (score >= 90) {
+		return ':trophy:';
+	}
+	if (score >= 80) {
+		return ':star:';
+	}
+	return '';
+};
 
 export const sleepBattleCronJob = pubsub
 	.schedule('0 12 * * *')
@@ -58,6 +76,7 @@ export const sleepBattleCronJob = pubsub
 
 			if (!sleep) {
 				sleepScores.push({
+					type: 'user',
 					username: username as string,
 					avatar: profileResponse?.user?.avatar as string ?? '',
 					score: null,
@@ -84,12 +103,15 @@ export const sleepBattleCronJob = pubsub
 
 			const [score] = sleepScorePredicter.predict(data);
 			sleepScores.push({
+				type: 'user',
 				username: username as string,
 				avatar: profileResponse?.user?.avatar as string ?? '',
 				score,
 				wakeTime: dayjs.tz(sleep.endTime, 'Asia/Tokyo').format('HH:mm'),
 			});
 		}
+
+		sleepScores.push({type: 'divider', score: 72});
 
 		sleepScores.sort((a, b) => {
 			if (a.score === null && b.score === null) {
@@ -134,20 +156,37 @@ export const sleepBattleCronJob = pubsub
 						emoji: true,
 					},
 				},
-				...sleepScores.map((sleep) => ({
-					type: 'section',
-					text: {
-						type: 'mrkdwn',
-						text: sleep.score === null
-							? `${sleep.rank}位 ${getUsernameText(sleep.username)}\n起床失敗:cry:`
-							: `${sleep.rank}位 ${getUsernameText(sleep.username)}\n推定睡眠スコア: ${Math.round(sleep.score)}点\n起床時刻: ${sleep.wakeTime}`,
-					},
-					accessory: {
-						type: 'image',
-						image_url: sleep.avatar,
-						alt_text: sleep.username,
-					},
-				})),
+				...sleepScores.map((sleep) => (
+					sleep.type === 'user' ? [
+						{
+							type: 'section',
+							text: {
+								type: 'mrkdwn',
+								text: sleep.score === null
+									? `${sleep.rank}位 ${getUsernameText(sleep.username)}\n起床失敗:cry:`
+									: `${sleep.rank}位 ${getUsernameText(sleep.username)}\n推定睡眠スコア: ${Math.round(sleep.score)}点${getScoreEmoji(sleep.score)}\n起床時刻: ${sleep.wakeTime}`,
+							},
+							accessory: {
+								type: 'image',
+								image_url: sleep.avatar,
+								alt_text: sleep.username,
+							},
+						},
+					] : [
+						{
+							type: 'context',
+							elements: [
+								{
+									type: 'plain_text',
+									text: `合格ライン (${sleep.score}点)`,
+									emoji: true,
+								},
+							],
+						},
+						{
+							type: 'divider',
+						},
+					])).flat(),
 			],
 		});
 	});
