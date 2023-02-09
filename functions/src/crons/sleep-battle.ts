@@ -69,7 +69,7 @@ export const sleepBattleCronJob = pubsub
 			logger.info(`Retrieved ${sleepsResponse.sleep.length} sleeps by ${username}`);
 			const today = dayjs().tz('Asia/Tokyo');
 
-			const sleep = sleepsResponse.sleep.find((s: any) => {
+			const sleep = sleepsResponse.sleep.reverse().find((s: any) => {
 				const day = dayjs.tz(s.endTime, 'Asia/Tokyo');
 				return today.isSame(day, 'day') && s.isMainSleep;
 			});
