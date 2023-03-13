@@ -5,7 +5,7 @@ import type {WebAPICallResult, MessageAttachment, KnownBlock} from '@slack/web-a
 import {stripIndents} from 'common-tags';
 import download from 'download';
 import {https, logger, config as getConfig} from 'firebase-functions';
-import {sample} from 'lodash';
+import {range, sample} from 'lodash';
 import {HAKATASHI_ID, SATOS_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID, TSGBOT_ID} from './const';
 import {db, State, States} from './firestore';
 import twitter from './twitter';
@@ -101,105 +101,136 @@ const unescapeSlackComponent = (text: string) => (
 );
 
 // Slack-Twitter tunnel
+const slackTwitterTunnel = async (event: ReactionAddedEvent) => {
+	const account = getTwitterAccount(event.reaction);
+
+	if (account === null) {
+		return;
+	}
+
+	if (account !== 'satos_sandbox' && !(event.user === HAKATASHI_ID && event.item_user === HAKATASHI_ID)) {
+		return;
+	}
+
+	if (account === 'satos_sandbox' && !(event.item_user === SATOS_ID && event.item.channel === SANDBOX_ID)) {
+		return;
+	}
+
+	const {messages} = await slack.conversations.replies({
+		channel: event.item.channel,
+		ts: event.item.ts,
+		latest: event.item.ts,
+		inclusive: true,
+		limit: 1,
+	}) as GetMessagesResult;
+
+	if (!messages || messages.length !== 1) {
+		return;
+	}
+
+	const message = messages[0]!;
+
+	if (account === 'satos_sandbox' && message.reactions) {
+		const reaction = message.reactions.find(({name}) => event.reaction === name);
+		if (reaction && reaction.count >= 2) {
+			return;
+		}
+	}
+
+	const urls = [];
+
+	for (const file of message.files ?? []) {
+		if (file.mimetype.startsWith('image/')) {
+			urls.push(file.url_private);
+		}
+	}
+
+	const usedUrls = new Set<string>();
+	for (const attachment of message.attachments ?? []) {
+		if (attachment.image_url && attachment.service_name === 'Gyazo') {
+			urls.push(attachment.image_url);
+			if (attachment.original_url) {
+				usedUrls.add(attachment.original_url);
+			}
+		}
+	}
+
+	const mediaIds = [];
+	for (const url of urls.slice(0, 4)) {
+		const {hostname} = new URL(url);
+		const imageData = await download(url, undefined, {
+			headers: {
+				...(hostname === 'files.slack.com' ? {Authorization: `Bearer ${config.slack.token}`} : {}),
+			},
+		});
+		const data = await twitter(account, 'POST', 'media/upload', {
+			media_data: imageData.toString('base64'),
+			media_category: 'tweet_image',
+		});
+		mediaIds.push(data.media_id_string);
+	}
+
+	// Unescape
+	let text = message.text.replace(/<(?<component>.+?)>/g, (_match, component) => {
+		const [info, displayText] = component.split('|');
+		if ((/^[@#!]/).test(info)) {
+			return '';
+		}
+		if (usedUrls.has(unescapeSlackComponent(info))) {
+			return '';
+		}
+		if (displayText) {
+			return displayText;
+		}
+		return info;
+	});
+	text = unescapeSlackComponent(text).trim();
+
+	if (account === 'satos_sandbox') {
+		text = `[${event.user}] ${text}`;
+	}
+
+	try {
+		const data = await twitter(account, 'POST', 'statuses/update', {
+			status: text,
+			...(mediaIds.length > 0 ? {media_ids: mediaIds.join(',')} : {}),
+		});
+		logger.info(`Tweeted ${JSON.stringify(text)} with tweet ID ${data.id_str}`);
+	} catch (error) {
+		logger.error('Tweet errored', error);
+	}
+};
+
+const letterpackEmojis = [
+	...range(19).map((i) => `letterpack-${i}`),
+	...range(10).map((i) => `letterpack-light-${i}`),
+];
+
+// Letterpack bomb
+const letterpackBomb = async (event: ReactionAddedEvent) => {
+	if (!(event.user === HAKATASHI_ID && event.reaction === 'love_letter')) {
+		return;
+	}
+
+	await slack.reactions.remove({
+		channel: event.item.channel,
+		timestamp: event.item.ts,
+		name: event.reaction,
+	});
+
+	await Promise.all(letterpackEmojis.map((emoji) => (
+		slack.reactions.add({
+			channel: event.item.channel,
+			timestamp: event.item.ts,
+			name: emoji,
+		})
+	)));
+};
+
 eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
 	if (event.item.type === 'message') {
-		const account = getTwitterAccount(event.reaction);
-
-		if (account === null) {
-			return;
-		}
-
-		if (account !== 'satos_sandbox' && !(event.user === HAKATASHI_ID && event.item_user === HAKATASHI_ID)) {
-			return;
-		}
-
-		if (account === 'satos_sandbox' && !(event.item_user === SATOS_ID && event.item.channel === SANDBOX_ID)) {
-			return;
-		}
-
-		const {messages} = await slack.conversations.replies({
-			channel: event.item.channel,
-			ts: event.item.ts,
-			latest: event.item.ts,
-			inclusive: true,
-			limit: 1,
-		}) as GetMessagesResult;
-
-		if (!messages || messages.length !== 1) {
-			return;
-		}
-
-		const message = messages[0]!;
-
-		if (account === 'satos_sandbox' && message.reactions) {
-			const reaction = message.reactions.find(({name}) => event.reaction === name);
-			if (reaction && reaction.count >= 2) {
-				return;
-			}
-		}
-
-		const urls = [];
-
-		for (const file of message.files ?? []) {
-			if (file.mimetype.startsWith('image/')) {
-				urls.push(file.url_private);
-			}
-		}
-
-		const usedUrls = new Set<string>();
-		for (const attachment of message.attachments ?? []) {
-			if (attachment.image_url && attachment.service_name === 'Gyazo') {
-				urls.push(attachment.image_url);
-				if (attachment.original_url) {
-					usedUrls.add(attachment.original_url);
-				}
-			}
-		}
-
-		const mediaIds = [];
-		for (const url of urls.slice(0, 4)) {
-			const {hostname} = new URL(url);
-			const imageData = await download(url, undefined, {
-				headers: {
-					...(hostname === 'files.slack.com' ? {Authorization: `Bearer ${config.slack.token}`} : {}),
-				},
-			});
-			const data = await twitter(account, 'POST', 'media/upload', {
-				media_data: imageData.toString('base64'),
-				media_category: 'tweet_image',
-			});
-			mediaIds.push(data.media_id_string);
-		}
-
-		// Unescape
-		let text = message.text.replace(/<(?<component>.+?)>/g, (_match, component) => {
-			const [info, displayText] = component.split('|');
-			if ((/^[@#!]/).test(info)) {
-				return '';
-			}
-			if (usedUrls.has(unescapeSlackComponent(info))) {
-				return '';
-			}
-			if (displayText) {
-				return displayText;
-			}
-			return info;
-		});
-		text = unescapeSlackComponent(text).trim();
-
-		if (account === 'satos_sandbox') {
-			text = `[${event.user}] ${text}`;
-		}
-
-		try {
-			const data = await twitter(account, 'POST', 'statuses/update', {
-				status: text,
-				...(mediaIds.length > 0 ? {media_ids: mediaIds.join(',')} : {}),
-			});
-			logger.info(`Tweeted ${JSON.stringify(text)} with tweet ID ${data.id_str}`);
-		} catch (error) {
-			logger.error('Tweet errored', error);
-		}
+		await slackTwitterTunnel(event);
+		await letterpackBomb(event);
 	}
 });
 
