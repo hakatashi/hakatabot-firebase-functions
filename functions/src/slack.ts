@@ -5,7 +5,7 @@ import type {WebAPICallResult, MessageAttachment, KnownBlock} from '@slack/web-a
 import {stripIndents} from 'common-tags';
 import download from 'download';
 import {https, logger, config as getConfig} from 'firebase-functions';
-import {range, sample} from 'lodash';
+import {range, sample, shuffle} from 'lodash';
 import {HAKATASHI_ID, SATOS_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID, TSGBOT_ID} from './const';
 import {db, State, States} from './firestore';
 import twitter from './twitter';
@@ -218,7 +218,7 @@ const letterpackBomb = async (event: ReactionAddedEvent) => {
 		name: event.reaction,
 	});
 
-	await Promise.all(letterpackEmojis.map((emoji) => (
+	await Promise.all(shuffle(letterpackEmojis).map((emoji) => (
 		slack.reactions.add({
 			channel: event.item.channel,
 			timestamp: event.item.ts,
