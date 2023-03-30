@@ -150,6 +150,8 @@ export const sleepBattleCronJob = pubsub
 			as_user: true,
 			channel: SANDBOX_ID,
 			text: '本日の睡眠ランキング',
+			unfurl_links: false,
+			unfurl_media: false,
 			blocks: [
 				{
 					type: 'header',
@@ -190,6 +192,18 @@ export const sleepBattleCronJob = pubsub
 							type: 'divider',
 						},
 					])).flat(),
+				{
+					type: 'divider',
+				},
+				{
+					type: 'context',
+					elements: [
+						{
+							type: 'mrkdwn',
+							text: '<https://scrapbox.io/tsg/%E7%9D%A1%E7%9C%A0%E3%83%A9%E3%83%B3%E3%82%AD%E3%83%B3%E3%82%B0|このBOTについて>',
+						},
+					],
+				},
 			],
 		});
 	});
