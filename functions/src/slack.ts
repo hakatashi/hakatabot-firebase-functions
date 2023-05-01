@@ -380,7 +380,7 @@ const isRinnaSignalBlockList = (text: string) => {
 };
 
 const matchRinnaSignalText = (text: string) => {
-	if (text.includes('今言うな') || text.includes('皿洗')) {
+	if (text.includes('今言うな') || text.includes('皿洗') || text.includes('たたも')) {
 		return true;
 	}
 	for (const name of ['りんな', 'うな', 'うか', 'うの']) {
@@ -469,7 +469,8 @@ eventAdapter.on('message', async (message: Message) => {
 				message.username === 'りんな' ||
 				message.username === '今言うな' ||
 				message.username === '皿洗うか' ||
-				message.username === '皿洗うの'
+				message.username === '皿洗うの' ||
+				message.username === '三脚たたも'
 			)
 		) {
 			recentHumanMessages.push(message);
