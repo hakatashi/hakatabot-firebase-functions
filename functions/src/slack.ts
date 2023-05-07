@@ -243,74 +243,14 @@ eventAdapter.on('message', async (message: Message) => {
 		message.text.endsWith('わからん') &&
 		message?.icons?.emoji === ':man_dancing_2:'
 	) {
-		const text = sample([
-			'チンイツクイズ',
-			'チンイツクイズhard',
-			'ポッキーゲーム',
-			'将棋',
-			'15手必勝将棋',
-			'たほいや',
-			'素数大富豪',
-			'今何時？',
-			'あほくさスライドパズル',
-			'寿司スライドパズル',
-			'寿司スライドパズル 6',
-			'千矢スライドパズル',
-			'ベイビーロボット 1000手',
-			'スーパーロボット 1000手',
-			'ハイパーロボット 1000手',
-			'ベイビーロボットバトル',
-			'スーパーロボットバトル',
-			'ハイパーロボットバトル',
-			'wordhero',
-			'hardhero',
-			'crossword',
-			'grossword',
-			'ボイパーロボット',
-			'ボイパーロボット100',
-			'ボイパーロボットバトル',
-			'ボイパーロボットバトル100',
-			'デニム',
-			'おみくじ',
-			'ぽんぺ出題',
-			'アニメ当てクイズ',
-			'アニメ当てクイズeasy',
-			'アニメ当てクイズhard',
-			'アニメ当てクイズextreme',
-			'アニソン当てクイズ',
-			'アニソン当てクイズeasy',
-			'アニソン当てクイズhard',
-			'キャラ当てクイズ',
-			'ソートなぞなぞ',
-			'ソートなぞなぞ 20字',
-			'@cfb',
-			'物件ガチャ',
-			'物件ガチャ 東京都',
-			'早押しクイズ',
-			'早押しクイズhard',
-			'hitandblow',
-			'hitandblow 10',
-			'octas',
-			'hangman',
-			'hangman easy',
-			'hangman hard',
-			'hangman extreme',
-			'きらファン当てクイズ',
-			'文豪クイズ',
-			'文豪当てクイズ',
-			'ダーツの旅',
-			'ダーツの旅 東京都',
-			'実績当てクイズ',
-			'和同開珎',
-			'座標当て',
-			'座標当て 0.1',
-		]);
-
-		await slack.chat.postMessage({
-			as_user: true,
-			channel: SANDBOX_ID,
-			text,
-		});
+		await pubsubClient
+			.topic('hakatabot')
+			.publishMessage({
+				data: Buffer.from(JSON.stringify({
+					type: 'rinna-meaning',
+					word: message.text.split(':')[0],
+				})),
+			});
 	}
 });
 
@@ -509,6 +449,7 @@ eventAdapter.on('message', async (message: Message) => {
 				.topic('hakatabot')
 				.publishMessage({
 					data: Buffer.from(JSON.stringify({
+						type: 'rinna-signal',
 						botMessages: newBotMessages,
 						humanMessages: newHumanMessages,
 						lastSignal,
