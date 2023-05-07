@@ -13,6 +13,7 @@ jest.mock('axios');
 jest.mock('download');
 jest.mock('../twitter');
 
+// @ts-expect-error: Type mismatch
 const glyphwikibotCronJobFn = test.wrap(glyphwikibotCronJob);
 
 const randomGlyphURL = 'https://glyphwiki.org/wiki/Special:Random';
