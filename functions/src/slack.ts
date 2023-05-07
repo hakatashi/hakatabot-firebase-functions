@@ -5,7 +5,7 @@ import type {WebAPICallResult, MessageAttachment, KnownBlock} from '@slack/web-a
 import {stripIndents} from 'common-tags';
 import download from 'download';
 import {https, logger, config as getConfig} from 'firebase-functions';
-import {range, sample, shuffle} from 'lodash';
+import {range, shuffle} from 'lodash';
 import {HAKATASHI_ID, SATOS_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID, TSGBOT_ID} from './const';
 import {db, State, States} from './firestore';
 import twitter from './twitter';
