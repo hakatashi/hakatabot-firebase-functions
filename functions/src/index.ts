@@ -3,6 +3,7 @@ import {google} from 'googleapis';
 import {GoogleTokens, FitbitTokens, AnimeWatchRecords} from './firestore';
 import {client as fitbitClient} from './fitbit';
 import {oauth2Client} from './google';
+import assert from 'assert';
 
 export {slackEvent} from './slack';
 export * from './crons';
@@ -76,6 +77,7 @@ export const fitbitApiOauthCallback = https.onRequest(async (request, response) 
 		redirect_uri: 'https://us-central1-hakatabot-firebase-functions.cloudfunctions.net/fitbitApiOauthCallback',
 	});
 
+	assert(typeof accessToken.token.user_id === 'string')
 	await FitbitTokens.doc(accessToken.token.user_id).set(accessToken.token, {merge: true});
 
 	response.send('ok');
