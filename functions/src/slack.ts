@@ -249,6 +249,7 @@ eventAdapter.on('message', async (message: Message) => {
 				data: Buffer.from(JSON.stringify({
 					type: 'rinna-meaning',
 					word: message.text.split(':')[0],
+					ts: message.ts,
 				})),
 			});
 	}
