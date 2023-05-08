@@ -85,6 +85,21 @@ export const rinnaPingCronJob = pubsub.schedule('every 1 minutes').onRun(async (
 		);
 	} catch (error) {
 		logger.error(error);
+
+		logger.info('Posting status (status = major_outage)');
+		await axios.patch(
+			`https://api.statuspage.io/v1/pages/${config.statuspage.page_id}/components/${config.statuspage.component_id}`,
+			{
+				component: {
+					status: 'major_outage',
+				},
+			},
+			{
+				headers: {
+					Authorization: `OAuth ${config.statuspage.token}`,
+				},
+			},
+		);
 	} finally {
 		if (timeoutId) {
 			clearTimeout(timeoutId);
