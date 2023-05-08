@@ -40,11 +40,10 @@ export const rinnaPingCronJob = pubsub.schedule('every 1 minutes').onRun(async (
 				logger.info(`Received message ${message.id}`);
 				logger.info(message);
 
+				message.ack();
+
 				const data = JSON.parse(message.data.toString());
-				message.ackWithResponse().then(
-					() => resolve(data),
-					(error) => reject(error),
-				);
+				resolve(data);
 			});
 		});
 
