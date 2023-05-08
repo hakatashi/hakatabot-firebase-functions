@@ -1,7 +1,15 @@
 import {PubSub, Message} from '@google-cloud/pubsub';
-import {logger, pubsub} from 'firebase-functions';
+import axios from 'axios';
+import {logger, pubsub, config as getConfig} from 'firebase-functions';
+
+const config = getConfig();
 
 const pubsubClient = new PubSub();
+
+interface PongMessage {
+	type: 'rinna-pong',
+	mode: string,
+}
 
 export const rinnaPingCronJob = pubsub.schedule('every 1 minutes').onRun(async () => {
 	const now = Date.now();
@@ -27,20 +35,25 @@ export const rinnaPingCronJob = pubsub.schedule('every 1 minutes').onRun(async (
 	const topic = pubsubClient.topic(topicId);
 	const subscription = pubsubClient.subscription(subscriptionId);
 
+	// eslint-disable-next-line no-undef
+	let timeoutId: NodeJS.Timeout | null = null;
+
 	try {
-		const pongPromise = new Promise<void>((resolve, reject) => {
+		const pongPromise = new Promise<PongMessage>((resolve, reject) => {
 			subscription.once('message', (message: Message) => {
 				logger.info(`Received message ${message.id}`);
 				logger.info(message);
+
+				const data = JSON.parse(message.data.toString());
 				message.ackWithResponse().then(
-					() => resolve(),
+					() => resolve(data),
 					(error) => reject(error),
 				);
 			});
 		});
 
-		const timeoutPromise = new Promise<void>((_resolve, reject) => {
-			setTimeout(() => {
+		const timeoutPromise = new Promise<never>((_resolve, reject) => {
+			timeoutId = setTimeout(() => {
 				logger.error('Timed out');
 				reject(new Error('Timeout'));
 			}, 1000 * 30);
@@ -59,10 +72,27 @@ export const rinnaPingCronJob = pubsub.schedule('every 1 minutes').onRun(async (
 
 		logger.info('Published ping message to topic hakatabot');
 
-		await Promise.race([pongPromise, timeoutPromise]);
+		const pongMessage = await Promise.race([pongPromise, timeoutPromise]);
+		const status = pongMessage.mode === 'GPU' ? 'operational' : 'degraded_performance';
+
+		logger.info(`Posting status (mode = ${pongMessage.mode}, status = ${status})`);
+		await axios.patch(
+			`https://api.statuspage.io/v1/pages/${config.statuspage.page_id}/components/${config.statuspage.component_id}`,
+			{
+				component: {status},
+			},
+			{
+				headers: {
+					Authorization: `OAuth ${config.statuspage.token}`,
+				},
+			},
+		);
 	} catch (error) {
 		logger.error(error);
 	} finally {
+		if (timeoutId) {
+			clearTimeout(timeoutId);
+		}
 		subscription.removeAllListeners('message');
 
 		logger.info(`Deleting subscription ${subscriptionId}`);
