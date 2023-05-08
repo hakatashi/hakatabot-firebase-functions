@@ -553,7 +553,7 @@ eventAdapter.on('message', async (message: Message) => {
 // FitBit optout
 eventAdapter.on('message', async (message: Message) => {
 	if (
-		!message.text.startsWith('fitbit ') ||
+		!message.text?.startsWith('fitbit ') ||
 		message.subtype === 'bot_message' ||
 		typeof message.bot_id === 'string' ||
 		message.user === 'USLACKBOT' ||
