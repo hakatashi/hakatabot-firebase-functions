@@ -321,19 +321,11 @@ const isRinnaSignalBlockList = (text: string) => {
 };
 
 const matchRinnaSignalText = (text: string) => {
-	if (text.includes('今言うな') || text.includes('皿洗') || text.includes('たたも')) {
+	if (text.match(/(?:今言うな|皿洗うか|皿洗うの|三脚たたも)/)) {
 		return true;
 	}
-	for (const name of ['りんな', 'うな', 'うか', 'うの']) {
-		if (text.includes(`@${name}`)) {
-			return true;
-		}
-		if (text.startsWith(name) || text.endsWith(name)) {
-			return true;
-		}
-		if (name !== 'うか' && name !== 'うの' && text.match(new RegExp(`${name}[はがのを]`))) {
-			return true;
-		}
+	if (text.match(/^(?:りんな|うな|うか|うの|たたも)、/)) {
+		return true;
 	}
 	return false;
 };
