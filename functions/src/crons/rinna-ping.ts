@@ -3,7 +3,7 @@ import {logger, pubsub} from 'firebase-functions';
 
 const pubsubClient = new PubSub();
 
-export const rinnaPingCronJob = pubsub.schedule('every 1 minute').onRun(async () => {
+export const rinnaPingCronJob = pubsub.schedule('every 1 minutes').onRun(async () => {
 	const now = Date.now();
 
 	const topicId = `rinna-ping-${now}`;
