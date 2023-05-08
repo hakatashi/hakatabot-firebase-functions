@@ -19,21 +19,17 @@ export const rinnaPingCronJob = pubsub.schedule('every 1 minutes').onRun(async (
 
 	logger.info(`Creating one-time subscription (topicId = ${topicId}, subscriptionId = ${subscriptionId})`);
 
-	await pubsubClient
-		.createTopic(topicId);
+	const [topic] = await pubsubClient.createTopic(topicId);
 
 	logger.info(`Created topic ${topicId}`);
 
-	await pubsubClient
+	const [subscription] = await pubsubClient
 		.topic(topicId)
 		.createSubscription(subscriptionId, {
 			enableExactlyOnceDelivery: true,
 		});
 
 	logger.info(`Created subscription ${subscriptionId}`);
-
-	const topic = pubsubClient.topic(topicId);
-	const subscription = pubsubClient.subscription(subscriptionId);
 
 	// eslint-disable-next-line no-undef
 	let timeoutId: NodeJS.Timeout | null = null;
