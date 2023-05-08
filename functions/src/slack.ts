@@ -327,6 +327,9 @@ const matchRinnaSignalText = (text: string) => {
 	if (text.match(/^(?:りんな|うな|うか|うの|たたも)、/)) {
 		return true;
 	}
+	if (text.match(/@(?:りんな|うな|うか|うの|たたも)/)) {
+		return true;
+	}
 	return false;
 };
 
