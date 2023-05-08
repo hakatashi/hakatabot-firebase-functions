@@ -6,3 +6,4 @@ export * from './exercise-report';
 export * from './sleep-report';
 export * from './sleep-battle';
 export * from './morning-report';
+export * from './exercise-report';
