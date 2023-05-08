@@ -4,18 +4,27 @@ import {logger, pubsub} from 'firebase-functions';
 const pubsubClient = new PubSub();
 
 export const rinnaPingCronJob = pubsub.schedule('every 1 minute').onRun(async () => {
-	const subscriptionId = `rinna-ping-${Date.now()}`;
+	const now = Date.now();
 
-	logger.info(`Creating one-time subscription (subscriptionId = ${subscriptionId})`);
+	const topicId = `rinna-ping-${now}`;
+	const subscriptionId = `rinna-ping-subscription-${now}`;
+
+	logger.info(`Creating one-time subscription (topicId = ${topicId}, subscriptionId = ${subscriptionId})`);
 
 	await pubsubClient
-		.topic('hakatabot')
+		.createTopic(topicId);
+
+	logger.info(`Created topic ${topicId}`);
+
+	await pubsubClient
+		.topic(topicId)
 		.createSubscription(subscriptionId, {
 			enableExactlyOnceDelivery: true,
 		});
 
 	logger.info(`Created subscription ${subscriptionId}`);
 
+	const topic = pubsubClient.topic(topicId);
 	const subscription = pubsubClient.subscription(subscriptionId);
 
 	try {
@@ -36,7 +45,7 @@ export const rinnaPingCronJob = pubsub.schedule('every 1 minute').onRun(async ()
 				.publishMessage({
 					data: Buffer.from(JSON.stringify({
 						type: 'rinna-ping',
-						subscriptionId,
+						topicId,
 					})),
 				});
 
@@ -48,5 +57,9 @@ export const rinnaPingCronJob = pubsub.schedule('every 1 minute').onRun(async ()
 		logger.info(`Deleting subscription ${subscriptionId}`);
 		await subscription.delete();
 		logger.info(`Deleted subscription ${subscriptionId}`);
+
+		logger.info(`Deleting topic ${topicId}`);
+		await topic.delete();
+		logger.info(`Deleted topic ${topicId}`);
 	}
 });
