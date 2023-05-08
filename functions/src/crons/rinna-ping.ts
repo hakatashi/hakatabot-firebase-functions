@@ -11,7 +11,7 @@ interface PongMessage {
 	mode: string,
 }
 
-export const rinnaPingCronJob = pubsub.schedule('every 1 minutes').onRun(async () => {
+export const rinnaPingCronJob = pubsub.schedule('every 5 minutes').onRun(async () => {
 	const now = Date.now();
 
 	const topicId = `rinna-ping-${now}`;
