@@ -2,7 +2,6 @@ import {Octokit} from '@octokit/rest';
 import axios from 'axios';
 import * as functions from 'firebase-functions';
 import {logger, config as getConfig} from 'firebase-functions';
-import twitter from '../twitter';
 
 const config = getConfig();
 
@@ -226,21 +225,6 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 	});
 
 	logger.info(`done. (commit = ${newRef.object.sha})`);
-
-	logger.info('Waiting for 60 seconds...');
-
-	await new Promise((resolve) => {
-		setTimeout(resolve, 60 * 1000);
-	});
-
-	const url = `https://word.hakatashi.com/${date.replace(/-/g, '')}/`;
-
-	logger.info('Posting tweet...');
-	const res = await twitter('hakatashi_b', 'POST', 'statuses/update', {
-		status: `hakatashiの一日一語: 「${entry.word}」 ${url}`,
-	});
-
-	logger.info(`done. (id_str = ${res.id_str})`);
 };
 
 export const updateWordBlog = functions
