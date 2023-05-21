@@ -1,8 +1,9 @@
 name: Test
 on:
-  push:
+  - push
+  - pull_request
 jobs:
-  build:
+  test:
     name: Test
     runs-on: ubuntu-latest
     steps:
@@ -12,4 +13,29 @@ jobs:
         run: npm install
       - name: Run test
         run: npm test
-
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@master
+      - name: Install Dependencies
+        run: npm install
+      - name: Run lint
+        run: npm run lint
+  deploy:
+    name: Deploy
+    needs: [test, lint]
+    if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@master
+      - name: Install Dependencies
+        run: npm install
+      - name: Deploy to Firebase
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
