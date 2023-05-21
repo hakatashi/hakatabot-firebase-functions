@@ -35,7 +35,7 @@ export const rinnaPingCronJob = pubsub.schedule('every 5 minutes').onRun(async (
 	let timeoutId: NodeJS.Timeout | null = null;
 
 	try {
-		const pongPromise = new Promise<PongMessage>((resolve, reject) => {
+		const pongPromise = new Promise<PongMessage>((resolve) => {
 			subscription.once('message', (message: Message) => {
 				logger.info(`Received message ${message.id}`);
 				logger.info(message);
