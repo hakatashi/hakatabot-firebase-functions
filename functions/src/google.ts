@@ -1,5 +1,6 @@
 import {config as getConfig, logger} from 'firebase-functions';
 import {google} from 'googleapis';
+import {HAKATASHI_EMAIL} from './const';
 import {GoogleTokens} from './firestore';
 
 const config = getConfig();
@@ -25,3 +26,16 @@ oauth2Client.on('tokens', async (tokens) => {
 		await GoogleTokens.doc(tokenInfo.data.email).set(tokens, {merge: true});
 	}
 });
+
+export const getGoogleAuth = async () => {
+	const hakatashiTokensData = await GoogleTokens.doc(HAKATASHI_EMAIL).get();
+
+	if (!hakatashiTokensData.exists) {
+		throw new Error('hakatashi token not found');
+	}
+
+	const hakatashiTokens = hakatashiTokensData.data();
+	oauth2Client.setCredentials(hakatashiTokens!);
+
+	return oauth2Client;
+};

@@ -37,5 +37,9 @@
     "oauth": "^0.10.0",
     "simple-oauth2": "^5.0.0"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@types/chart.js": "2.8.0",
+    "chart.js": "2.8.0"
+  }
 }

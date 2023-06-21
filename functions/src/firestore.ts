@@ -1,7 +1,13 @@
-import type {DocumentReference} from '@google-cloud/firestore';
+import type {DocumentReference, CollectionReference} from '@google-cloud/firestore';
 import firebase from 'firebase-admin';
 
 firebase.initializeApp();
+
+export interface ItQuizProgressStat {
+	date: string,
+	done: number,
+	ideas: number,
+}
 
 export const db = firebase.firestore();
 export const GoogleTokens = db.collection('google-tokens');
@@ -10,6 +16,7 @@ export const FitbitTokens = db.collection('fitbit-tokens');
 export const FitbitActivities = db.collection('fitbit-activities');
 export const FitbitSleeps = db.collection('fitbit-sleeps');
 export const AnimeWatchRecords = db.collection('anime-watch-records');
+export const ItQuizProgressStats = db.collection('it-quiz-progress-stats') as CollectionReference<ItQuizProgressStat>;
 export const States = db.collection('states');
 
 export class State {
