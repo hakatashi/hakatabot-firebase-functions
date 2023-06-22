@@ -40,6 +40,6 @@
   "private": true,
   "devDependencies": {
     "@types/chart.js": "2.8.0",
-    "chart.js": "2.8.0"
+    "chart.js": "4.3.0"
   }
 }
