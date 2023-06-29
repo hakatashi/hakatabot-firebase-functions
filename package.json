@@ -17,7 +17,7 @@
     "firebase-functions-test": "^3.1.0",
     "jest": "^28.1.1",
     "ts-jest": "^28.0.5",
-    "typescript": "^5.1.5"
+    "typescript": "^5.1.6"
   },
   "scripts": {
     "test": "jest --passWithNoTests",
