@@ -31,7 +31,7 @@
     "emoji-data": "^0.2.0",
     "firebase-admin": "^11.9.0",
     "firebase-functions": "^4.4.1",
-    "googleapis": "^121.0.0",
+    "googleapis": "^122.0.0",
     "lodash": "^4.17.21",
     "ml-regression-multivariate-linear": "^2.0.4",
     "oauth": "^0.10.0",
