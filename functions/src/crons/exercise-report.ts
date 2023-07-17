@@ -1,13 +1,13 @@
 import {stripIndent} from 'common-tags';
 import dayjs from 'dayjs';
-import {logger, pubsub} from 'firebase-functions';
+import {logger, pubsub, firestore} from 'firebase-functions';
 import {last} from 'lodash';
 import {FITNESS_ID} from '../const';
 import {AnimeWatchRecords, FitbitActivities} from '../firestore';
 import * as fitbit from '../fitbit';
 import {webClient as slack} from '../slack';
 
-export const exerciseGetCronJob = pubsub.schedule('every 5 minutes').onRun(async () => {
+export const exerciseGetCronJob = pubsub.schedule('every 5 minutes').onRun(async (event) => {
 	logger.info('Getting fitbit activities...');
 	const res = await fitbit.get('/1/user/-/activities/list.json', {
 		afterDate: '1970-01-01',
@@ -17,12 +17,18 @@ export const exerciseGetCronJob = pubsub.schedule('every 5 minutes').onRun(async
 	});
 
 	logger.info(`Retrieved ${res.activities.length} activities`);
+	const now = new Date(event.timestamp);
+	const threshold = new Date(now.getTime() - 60 * 60 * 1000);
 	for (const activity of res.activities) {
-		await FitbitActivities.doc(activity.logId.toString()).set(activity, {merge: true});
+		if (new Date(activity.lastModified) > threshold) {
+			await FitbitActivities.doc(activity.logId.toString()).set(activity, {merge: true});
+		} else {
+			logger.info(`Skipping activity ${activity.logId} because it's too old`);
+		}
 	}
 });
 
-export const exercisePostCronJob = pubsub.schedule('every 1 minutes').onRun(async () => {
+export const exercisePostCronJob = firestore.document('fitbit-activities/{logId}').onWrite(async () => {
 	const now = Date.now();
 	const thresholdTime = now - 5 * 60 * 1000;
 
