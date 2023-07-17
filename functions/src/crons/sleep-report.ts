@@ -13,7 +13,7 @@ import {webClient as slack} from '../slack';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-export const sleepGetCronJob = pubsub.schedule('every 5 minutes').onRun(async () => {
+export const sleepGetCronJob = pubsub.schedule('every 5 minutes').onRun(async (event) => {
 	if (dayjs().tz('Asia/Tokyo').hour() >= 10) {
 		return;
 	}
@@ -26,8 +26,16 @@ export const sleepGetCronJob = pubsub.schedule('every 5 minutes').onRun(async ()
 		offset: 0,
 	});
 
+	const now = new Date(event.timestamp);
+	const threshold = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+
 	logger.info(`Retrieved ${res.sleep.length} sleeps`);
 	for (const sleep of res.sleep) {
+		if (new Date(sleep.endTime) < threshold) {
+			logger.info(`Skipping sleep ${sleep.logId} because it's too old`);
+			continue;
+		}
+
 		const key = sleep.logId.toString();
 		const doc = await FitbitSleeps.doc(key).get();
 		if (!doc.exists) {

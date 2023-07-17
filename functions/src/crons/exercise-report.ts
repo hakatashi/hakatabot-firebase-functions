@@ -20,11 +20,11 @@ export const exerciseGetCronJob = pubsub.schedule('every 5 minutes').onRun(async
 	const now = new Date(event.timestamp);
 	const threshold = new Date(now.getTime() - 60 * 60 * 1000);
 	for (const activity of res.activities) {
-		if (new Date(activity.lastModified) > threshold) {
-			await FitbitActivities.doc(activity.logId.toString()).set(activity, {merge: true});
-		} else {
+		if (new Date(activity.lastModified) < threshold) {
 			logger.info(`Skipping activity ${activity.logId} because it's too old`);
+			continue;
 		}
+		await FitbitActivities.doc(activity.logId.toString()).set(activity, {merge: true});
 	}
 });
 
