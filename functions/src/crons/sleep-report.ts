@@ -14,11 +14,8 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export const sleepGetCronJob = pubsub.schedule('every 5 minutes').onRun(async (event) => {
-	if (dayjs().tz('Asia/Tokyo').hour() >= 10) {
-		return;
-	}
-
 	logger.info('Getting fitbit activities...');
+
 	const res = await fitbit.get('/1.2/user/-/sleep/list.json', {
 		beforeDate: '2100-01-01',
 		sort: 'desc',
@@ -38,7 +35,7 @@ export const sleepGetCronJob = pubsub.schedule('every 5 minutes').onRun(async (e
 
 		const key = sleep.logId.toString();
 		const doc = await FitbitSleeps.doc(key).get();
-		if (!doc.exists) {
+		if (!doc.exists && dayjs().tz('Asia/Tokyo').hour() <= 10) {
 			const wake = get(sleep, ['levels', 'summary', 'wake', 'minutes'], 0);
 			const rem = get(sleep, ['levels', 'summary', 'rem', 'minutes'], 0);
 			const light = get(sleep, ['levels', 'summary', 'light', 'minutes'], 0);
