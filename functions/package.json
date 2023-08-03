@@ -16,7 +16,7 @@
   },
   "main": "lib/index.js",
   "dependencies": {
-    "@google-cloud/pubsub": "^3.7.3",
+    "@google-cloud/pubsub": "^4.0.0",
     "@octokit/rest": "^20.0.1",
     "@slack/events-api": "^3.0.1",
     "@slack/web-api": "^6.9.0",
