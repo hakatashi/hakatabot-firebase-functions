@@ -51,6 +51,7 @@ export const sleepBattleCronJob = pubsub
 		const sleepScores = [] as Rank[];
 
 		for (const token of fitbitTokens.docs) {
+			logger.info(`Getting fitbit profile of ${token.id}...`);
 			const profileResponse = await fitbit.get('/1/user/-/profile.json', {}, token.id);
 			const username = profileResponse?.user?.displayName ?? 'No Name';
 
@@ -58,7 +59,7 @@ export const sleepBattleCronJob = pubsub
 				continue;
 			}
 
-			logger.info('Getting fitbit activities...');
+			logger.info(`Getting fitbit activities of ${username}...`);
 			const sleepsResponse = await fitbit.get('/1.2/user/-/sleep/list.json', {
 				beforeDate: '2100-01-01',
 				sort: 'desc',
