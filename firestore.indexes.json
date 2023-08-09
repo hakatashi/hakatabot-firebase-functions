@@ -1,4 +1,19 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "rinna-responses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "message.message.thread_ts",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "message.ts",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }
