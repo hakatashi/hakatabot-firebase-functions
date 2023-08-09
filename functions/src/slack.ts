@@ -363,6 +363,7 @@ eventAdapter.on('message', async (message: Message) => {
 
 	const threadQueryResult = await db.collection('rinna-responses')
 		.where('message.message.thread_ts', '==', message.thread_ts)
+		.orderBy('message.ts', 'asc')
 		.get();
 
 	const resultDocs = [...queryResult.docs, ...threadQueryResult.docs];
