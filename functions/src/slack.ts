@@ -361,43 +361,55 @@ eventAdapter.on('message', async (message: Message) => {
 		.where('message.ts', '==', message.thread_ts)
 		.get();
 
-	for (const doc of queryResult.docs) {
-		const inputDialog = doc.get('inputDialog') as string ?? '';
-		const outputSpeech = doc.get('outputSpeech') as string ?? '';
-		const output = doc.get('output') as string ?? '';
-		const character = doc.get('character') as string ?? '';
-		const moderations = doc.get('moderations') as Moderations ?? {};
+	const threadQueryResult = await db.collection('rinna-responses')
+		.where('message.message.thread_ts', '==', message.thread_ts)
+		.get();
 
-		const tailText = output.split('」').slice(1).join('」');
-		let text = stripIndents`
-			Input:
-			\`\`\`
-			${inputDialog.trim()}
-			\`\`\`
-			Result:
-			\`\`\`
-			${character}「${outputSpeech.trim()}」
-			\`\`\`
-			Continuation Text:
-			\`\`\`
-			${tailText.trim()}
-			\`\`\`
-		`;
+	const resultDocs = [...queryResult.docs, ...threadQueryResult.docs];
 
-		if (moderations.google_language_service) {
-			const isAdult = moderations.google_language_service.categories
+	if (resultDocs.length === 0) {
+		return;
+	}
+
+	const doc = resultDocs[0];
+
+	const inputDialog = doc.get('inputDialog') as string ?? '';
+	const outputSpeech = doc.get('outputSpeech') as string ?? '';
+	const output = doc.get('output') as string ?? '';
+	const character = doc.get('character') as string ?? '';
+	const moderations = resultDocs.map((resultDoc) => resultDoc.get('moderations') as Moderations ?? {});
+
+	const tailText = output.split('」').slice(1).join('」');
+	let text = stripIndents`
+		Input:
+		\`\`\`
+		${inputDialog.trim()}
+		\`\`\`
+		Result:
+		\`\`\`
+		${character}「${outputSpeech.trim()}」
+		\`\`\`
+		Continuation Text:
+		\`\`\`
+		${tailText.trim()}
+		\`\`\`
+	`;
+
+	for (const moderation of moderations) {
+		if (moderation.google_language_service) {
+			const isAdult = moderation.google_language_service.categories
 				.some((category) => category.name === '/Adult');
 			text += '\n';
 			text += [
 				`Google Moderation Result: ${isAdult ? 'NG' : 'OK'}`,
 				'```',
-				JSON.stringify(moderations.google_language_service.categories, null, '  '),
+				JSON.stringify(moderation.google_language_service.categories, null, '  '),
 				'```',
 			].join('\n');
 		}
 
-		if (moderations.azure_content_moderator) {
-			const terms = moderations.azure_content_moderator.terms ?? [];
+		if (moderation.azure_content_moderator) {
+			const terms = moderation.azure_content_moderator.terms ?? [];
 			const isOffensive = terms.length > 0;
 			text += '\n';
 			text += [
@@ -407,14 +419,14 @@ eventAdapter.on('message', async (message: Message) => {
 				'```',
 			].join('\n');
 		}
-
-		await slack.chat.postMessage({
-			channel: message.channel,
-			thread_ts: message.thread_ts,
-			username: 'GPT-2 Messaging Engine Service Rinna',
-			text,
-		});
 	}
+
+	await slack.chat.postMessage({
+		channel: message.channel,
+		thread_ts: message.thread_ts,
+		username: 'GPT-2 Messaging Engine Service Rinna',
+		text,
+	});
 });
 
 // FitBit optout
