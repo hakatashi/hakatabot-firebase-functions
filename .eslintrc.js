@@ -8,5 +8,6 @@ module.exports = {
 		'import/default': 'off',
 		'import/no-namespace': 'off',
 		'@typescript-eslint/ban-ts-comment': 'off',
+		'@typescript-eslint/no-explicit-any': 'warn',
 	},
 };
