@@ -26,7 +26,7 @@
     "cheerio": "^1.0.0-rc.12",
     "cloudinary": "^1.40.0",
     "common-tags": "^1.8.2",
-    "dayjs": "^1.11.9",
+    "dayjs": "^1.11.10",
     "download": "^8.0.0",
     "emoji-data": "^0.2.0",
     "firebase-admin": "^11.10.1",
