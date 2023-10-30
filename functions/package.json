@@ -20,7 +20,7 @@
     "@octokit/rest": "^20.0.2",
     "@slack/events-api": "^3.0.1",
     "@slack/web-api": "^6.9.1",
-    "@slack/webhook": "^7.0.0",
+    "@slack/webhook": "^7.0.1",
     "@unicode/unicode-14.0.0": "^1.5.2",
     "axios": "^1.6.0",
     "cheerio": "^1.0.0-rc.12",
