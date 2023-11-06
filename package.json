@@ -13,7 +13,7 @@
     "@types/oauth": "^0.9.3",
     "@types/simple-oauth2": "^5.0.6",
     "@typescript-eslint/eslint-plugin": "^6.10.0",
-    "@typescript-eslint/parser": "^6.9.1",
+    "@typescript-eslint/parser": "^6.10.0",
     "eslint": "^8.53.0",
     "firebase-functions-test": "^3.1.0",
     "jest": "^28.1.1",
