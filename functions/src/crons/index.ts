@@ -6,3 +6,4 @@ export * from './sleep-battle';
 export * from './morning-report';
 export * from './rinna-ping';
 export * from './it-quiz';
+export * from './tsgctf-platform';
