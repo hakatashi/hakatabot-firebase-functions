@@ -170,7 +170,7 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 
 		const res = await axios.post(`https://${config.mastodon.hostname}/api/v1/statuses`, JSON.stringify({
 			status: normalizedText,
-			visibility: 'unlisted',
+			visibility: 'public',
 			media_ids: mediaIds,
 		}), {
 			headers: {
