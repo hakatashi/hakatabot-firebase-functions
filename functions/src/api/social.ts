@@ -4,6 +4,8 @@ import {Client as ThreadsClient} from '@threadsjs/threads.js';
 import axios from 'axios';
 import {load as cheerio} from 'cheerio';
 import {https, logger, config as getConfig} from 'firebase-functions';
+import {SANDBOX_ID} from '../const';
+import {webClient as slack} from '../slack';
 
 const config = getConfig();
 
@@ -274,6 +276,36 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 		});
 
 		logger.info(`Posted Threads status: ${res.data.media.code}`);
+	}
+
+	// Update Slack status
+	{
+		const permalinks: string[] = [];
+
+		for (const image of images) {
+			const res = await slack.files.upload({
+				file: image.data,
+				filename: `image.${image.format}`,
+			});
+
+			logger.info(`Uploaded image: ${res.file?.id}`);
+
+			const permalink = res.file?.permalink;
+
+			if (!permalink) {
+				logger.error('Failed to upload image');
+				continue;
+			}
+
+			permalinks.push(permalink);
+		}
+
+		await slack.chat.postMessage({
+			channel: SANDBOX_ID,
+			text: `${normalizedText} ${permalinks.map((link) => `<${link}| >`).join('')}`,
+		});
+
+		logger.info('Posted Slack status');
 	}
 
 	response.send('OK');
