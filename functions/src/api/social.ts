@@ -196,16 +196,16 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 		const blobs: any[] = [];
 
 		for (const image of images) {
-			const res = await axios.post('https://bsky.social/xrpc/com.atproto.repo.uploadBlob', image.data, {
+			const uploadRes = await axios.post('https://bsky.social/xrpc/com.atproto.repo.uploadBlob', image.data, {
 				headers: {
 					'Content-Type': imageFormatToMimeType(image.format)!,
 					Authorization: `Bearer ${session}`,
 				},
 			});
 
-			logger.info(`Uploaded image: ${JSON.stringify(res.data.blob)}`);
+			logger.info(`Uploaded image: ${JSON.stringify(uploadRes.data.blob)}`);
 
-			blobs.push(res.data.blob);
+			blobs.push(uploadRes.data.blob);
 		}
 
 		const postRes = await axios.post('https://bsky.social/xrpc/com.atproto.repo.createRecord', JSON.stringify({
