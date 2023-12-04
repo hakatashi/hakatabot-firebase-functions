@@ -54,6 +54,12 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 		return;
 	}
 
+	if (text.includes('@')) {
+		response.status(201);
+		response.send('OK');
+		return;
+	}
+
 	logger.info(`text: ${text}`);
 	logger.info(`link to tweet: ${linkToTweet}`);
 
