@@ -307,6 +307,7 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 		}
 
 		await slack.chat.postMessage({
+			as_user: true,
 			channel: SANDBOX_ID,
 			text: `${normalizedText} ${permalinks.map((link) => `<${link}| >`).join('')}`,
 		});
