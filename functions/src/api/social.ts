@@ -7,6 +7,7 @@ import {https, logger, config as getConfig} from 'firebase-functions';
 import FormData from 'form-data';
 import {SANDBOX_ID} from '../const';
 import {webClient as slack} from '../slack';
+import Blob from 'cross-blob';
 
 const config = getConfig();
 
