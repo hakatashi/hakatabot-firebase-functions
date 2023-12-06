@@ -14,8 +14,10 @@
   "engines": {
     "node": "16"
   },
+  "type": "module",
   "main": "lib/index.js",
   "dependencies": {
+    "@google-cloud/functions-framework": "^3.3.0",
     "@google-cloud/pubsub": "^4.0.7",
     "@octokit/rest": "^20.0.2",
     "@slack/events-api": "^3.0.1",

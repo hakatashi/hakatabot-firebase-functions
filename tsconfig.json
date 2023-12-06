@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "ESNext",
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "outDir": "functions/lib",
@@ -12,7 +12,8 @@
     "typeRoots": [
       "./functions/types",
       "./node_modules/@types"
-    ]
+    ],
+    "moduleResolution": "node"
   },
   "compileOnSave": true,
   "include": [
