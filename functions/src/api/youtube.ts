@@ -1,7 +1,7 @@
 import {https, logger} from 'firebase-functions';
 import {google} from 'googleapis';
-import {BILLBOARD_HOT100_ID} from '../const';
-import {getGoogleAuth} from '../google';
+import {BILLBOARD_HOT100_ID} from '../const.js';
+import {getGoogleAuth} from '../google.js';
 
 // initialize the Youtube API library
 const youtube = google.youtube('v3');

@@ -1,6 +1,6 @@
 import {https, logger} from 'firebase-functions';
 import {get, last} from 'lodash';
-import * as fitbit from '../fitbit';
+import * as fitbit from '../fitbit.js';
 
 export const fitbitLatestHeartBeatRate = https.onRequest(async (request, response) => {
 	logger.info('Getting fitbit heart rate history...');

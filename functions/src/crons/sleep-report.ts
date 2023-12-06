@@ -5,10 +5,10 @@ import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import {logger, pubsub} from 'firebase-functions';
 import {get} from 'lodash';
-import {SANDBOX_ID} from '../const';
-import {FitbitSleeps} from '../firestore';
-import * as fitbit from '../fitbit';
-import {webClient as slack} from '../slack';
+import {SANDBOX_ID} from '../const.js';
+import {FitbitSleeps} from '../firestore.js';
+import * as fitbit from '../fitbit.js';
+import {webClient as slack} from '../slack.js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);

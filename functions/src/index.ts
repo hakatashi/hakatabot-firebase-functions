@@ -6,8 +6,8 @@ import {client as fitbitClient} from './fitbit.js';
 import {oauth2Client} from './google.js';
 
 export {slackEvent} from './slack.js';
-export * from './crons';
-export * from './api';
+export * from './crons/index.js';
+export * from './api/index.js';
 
 const oauth2 = google.oauth2('v2');
 

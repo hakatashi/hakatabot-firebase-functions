@@ -2,10 +2,10 @@
 
 import dayjs from 'dayjs';
 import {logger, pubsub} from 'firebase-functions';
-import {SANDBOX_ID} from '../const';
-import {FitbitTokens, State} from '../firestore';
-import * as fitbit from '../fitbit';
-import {webClient as slack} from '../slack';
+import {SANDBOX_ID} from '../const.js';
+import {FitbitTokens, State} from '../firestore.js';
+import * as fitbit from '../fitbit.js';
+import {webClient as slack} from '../slack.js';
 import sleepScorePredicter from './lib/sleep.js';
 
 interface UserRank {

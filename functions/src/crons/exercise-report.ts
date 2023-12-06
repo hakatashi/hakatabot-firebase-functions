@@ -2,10 +2,10 @@ import {stripIndent} from 'common-tags';
 import dayjs from 'dayjs';
 import {logger, pubsub, firestore} from 'firebase-functions';
 import {last} from 'lodash';
-import {FITNESS_ID} from '../const';
-import {AnimeWatchRecords, FitbitActivities} from '../firestore';
-import * as fitbit from '../fitbit';
-import {webClient as slack} from '../slack';
+import {FITNESS_ID} from '../const.js';
+import {AnimeWatchRecords, FitbitActivities} from '../firestore.js';
+import * as fitbit from '../fitbit.js';
+import {webClient as slack} from '../slack.js';
 
 export const exerciseGetCronJob = pubsub.schedule('every 5 minutes').onRun(async (event) => {
 	logger.info('Getting fitbit activities...');

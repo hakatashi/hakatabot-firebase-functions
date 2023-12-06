@@ -1,6 +1,6 @@
 import {logger, pubsub} from 'firebase-functions';
-import {SANDBOX_ID} from '../const';
-import {webClient as slack} from '../slack';
+import {SANDBOX_ID} from '../const.js';
+import {webClient as slack} from '../slack.js';
 
 export const sleepMorningReportCronJob = pubsub
 	.schedule('30 7 * * *')

@@ -2,10 +2,10 @@ import type {ChartConfiguration} from 'chart.js';
 import dayjs from 'dayjs';
 import {logger, pubsub} from 'firebase-functions';
 import {google} from 'googleapis';
-import {IT_QUIZ_GOOGLE_SHEET_ID, IT_QUIZ_ID} from '../const';
-import {ItQuizProgressStats} from '../firestore';
-import {getGoogleAuth} from '../google';
-import {webClient as slack} from '../slack';
+import {IT_QUIZ_GOOGLE_SHEET_ID, IT_QUIZ_ID} from '../const.js';
+import {ItQuizProgressStats} from '../firestore.js';
+import {getGoogleAuth} from '../google.js';
+import {webClient as slack} from '../slack.js';
 
 const weekdayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
