@@ -4,7 +4,8 @@ import {WebClient} from '@slack/web-api';
 import type {WebAPICallResult, MessageAttachment, KnownBlock} from '@slack/web-api';
 import {stripIndents} from 'common-tags';
 import {https, logger, config as getConfig} from 'firebase-functions';
-import {range, shuffle} from 'lodash';
+import range from 'lodash/range.js';
+import shuffle from 'lodash/shuffle.js';
 import {HAKATASHI_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID, TSGBOT_ID} from './const.js';
 import {db, State, States} from './firestore.js';
 

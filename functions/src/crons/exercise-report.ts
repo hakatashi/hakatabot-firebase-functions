@@ -1,7 +1,7 @@
 import {stripIndent} from 'common-tags';
 import dayjs from 'dayjs';
 import {logger, pubsub, firestore} from 'firebase-functions';
-import {last} from 'lodash';
+import last from 'lodash/last.js';
 import {FITNESS_ID} from '../const.js';
 import {AnimeWatchRecords, FitbitActivities} from '../firestore.js';
 import * as fitbit from '../fitbit.js';
