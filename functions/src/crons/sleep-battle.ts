@@ -6,7 +6,7 @@ import {SANDBOX_ID} from '../const';
 import {FitbitTokens, State} from '../firestore';
 import * as fitbit from '../fitbit';
 import {webClient as slack} from '../slack';
-import sleepScorePredicter from './lib/sleep';
+import sleepScorePredicter from './lib/sleep.js';
 
 interface UserRank {
 	type: 'user',

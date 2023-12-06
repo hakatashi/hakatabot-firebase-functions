@@ -1,11 +1,11 @@
 import assert from 'assert';
 import {https} from 'firebase-functions';
 import {google} from 'googleapis';
-import {GoogleTokens, FitbitTokens, AnimeWatchRecords} from './firestore';
-import {client as fitbitClient} from './fitbit';
-import {oauth2Client} from './google';
+import {GoogleTokens, FitbitTokens, AnimeWatchRecords} from './firestore.js';
+import {client as fitbitClient} from './fitbit.js';
+import {oauth2Client} from './google.js';
 
-export {slackEvent} from './slack';
+export {slackEvent} from './slack.js';
 export * from './crons';
 export * from './api';
 

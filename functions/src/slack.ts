@@ -5,8 +5,8 @@ import type {WebAPICallResult, MessageAttachment, KnownBlock} from '@slack/web-a
 import {stripIndents} from 'common-tags';
 import {https, logger, config as getConfig} from 'firebase-functions';
 import {range, shuffle} from 'lodash';
-import {HAKATASHI_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID, TSGBOT_ID} from './const';
-import {db, State, States} from './firestore';
+import {HAKATASHI_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID, TSGBOT_ID} from './const.js';
+import {db, State, States} from './firestore.js';
 
 const pubsubClient = new PubSub();
 

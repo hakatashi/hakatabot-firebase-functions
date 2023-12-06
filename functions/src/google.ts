@@ -1,7 +1,7 @@
 import {config as getConfig, logger} from 'firebase-functions';
 import {google} from 'googleapis';
-import {HAKATASHI_EMAIL} from './const';
-import {GoogleTokens} from './firestore';
+import {HAKATASHI_EMAIL} from './const.js';
+import {GoogleTokens} from './firestore.js';
 
 const config = getConfig();
 

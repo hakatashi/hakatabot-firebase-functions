@@ -5,7 +5,7 @@ import {logger, pubsub, config as getConfig} from 'firebase-functions';
 import inRange from 'lodash/inRange';
 import sample from 'lodash/sample';
 import {webClient as slack} from '../slack';
-import {getWaka} from './lib/waka';
+import {getWaka} from './lib/waka.js';
 
 const config = getConfig();
 

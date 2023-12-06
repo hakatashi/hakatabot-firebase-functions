@@ -1,3 +1,3 @@
-export * from './youtube';
-export * from './fitbit';
-export * from './social';
+export * from './youtube.js';
+export * from './fitbit.js';
+export * from './social.js';

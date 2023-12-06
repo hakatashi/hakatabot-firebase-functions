@@ -1,8 +1,8 @@
 import axios from 'axios';
 import {config as getConfig, logger} from 'firebase-functions';
 import {AuthorizationCode} from 'simple-oauth2';
-import {EXPIRATION_WINDOW_IN_SECONDS, HAKATASHI_FITBIT_ID} from './const';
-import {FitbitTokens} from './firestore';
+import {EXPIRATION_WINDOW_IN_SECONDS, HAKATASHI_FITBIT_ID} from './const.js';
+import {FitbitTokens} from './firestore.js';
 
 const config = getConfig();
 
