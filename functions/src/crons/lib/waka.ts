@@ -1,7 +1,7 @@
 import qs from 'querystring';
 import download from 'download';
-import get from 'lodash/get';
-import sample from 'lodash/sample';
+import get from 'lodash/get.js';
+import sample from 'lodash/sample.js';
 
 const pages = {
 	古今和歌集: '古今集',

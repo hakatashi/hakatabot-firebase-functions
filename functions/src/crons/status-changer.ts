@@ -1,9 +1,9 @@
-import unicodeNames from '@unicode/unicode-14.0.0/Names';
+import unicodeNames from '@unicode/unicode-14.0.0/Names/index.js';
 import download from 'download';
 import emojiData from 'emoji-data';
 import {logger, pubsub, config as getConfig} from 'firebase-functions';
-import inRange from 'lodash/inRange';
-import sample from 'lodash/sample';
+import inRange from 'lodash/inRange.js';
+import sample from 'lodash/sample.js';
 import {webClient as slack} from '../slack.js';
 import {getWaka} from './lib/waka.js';
 

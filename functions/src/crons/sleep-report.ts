@@ -1,8 +1,8 @@
 /* eslint-disable import/no-named-as-default-member */
 
 import dayjs from 'dayjs';
-import timezone from 'dayjs/plugin/timezone';
-import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone.js';
+import utc from 'dayjs/plugin/utc.js';
 import {logger, pubsub} from 'firebase-functions';
 import {get} from 'lodash';
 import {SANDBOX_ID} from '../const.js';
