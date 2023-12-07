@@ -12,7 +12,7 @@
     "logs": "firebase functions:log"
   },
   "engines": {
-    "node": "16"
+    "node": "18"
   },
   "type": "module",
   "main": "lib/index.js",
@@ -29,13 +29,11 @@
     "cheerio": "^1.0.0-rc.12",
     "cloudinary": "^1.41.0",
     "common-tags": "^1.8.2",
-    "cross-blob": "^3.0.2",
     "dayjs": "^1.11.10",
     "download": "^8.0.0",
     "emoji-data": "^0.2.0",
     "firebase-admin": "^11.11.1",
     "firebase-functions": "^4.5.0",
-    "form-data": "^4.0.0",
     "googleapis": "^129.0.0",
     "lodash": "^4.17.21",
     "ml-regression-multivariate-linear": "^2.0.4",

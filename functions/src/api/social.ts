@@ -3,9 +3,7 @@ import qs from 'querystring';
 import {Client as ThreadsClient} from '@threadsjs/threads.js';
 import axios from 'axios';
 import {load as cheerio} from 'cheerio';
-import Blob from 'cross-blob';
 import {https, logger, config as getConfig} from 'firebase-functions';
-import FormData from 'form-data';
 import {SANDBOX_ID} from '../const.js';
 import {webClient as slack} from '../slack.js';
 
