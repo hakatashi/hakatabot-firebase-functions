@@ -1,5 +1,6 @@
 import path from 'path';
 import qs from 'querystring';
+import type {File} from '@slack/web-api/dist/response/FilesUploadResponse.js';
 import {Client as ThreadsClient} from '@threadsjs/threads.js';
 import axios from 'axios';
 import {load as cheerio} from 'cheerio';
@@ -300,33 +301,27 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 
 	// Update Slack status
 	if (destinations.includes('slack')) {
-		const permalinks: string[] = [];
+		const files: File[] = [];
 
-		for (const image of images) {
-			const res = await slack.files.upload({
-				file: image.data,
-				filename: `image.${image.format}`,
+		if (images.length > 0) {
+			const res = await slack.files.uploadV2({
+				file_uploads: images.map((image) => ({
+					file: image.data,
+					filename: `image.${image.format}`,
+				})),
 			});
 
-			logger.info(`Uploaded image: ${res.file?.id}`);
-
-			const permalink = res.file?.permalink;
-
-			if (!permalink) {
-				logger.error('Failed to upload image');
-				continue;
-			}
-
-			permalinks.push(permalink);
+			files.push(...((res.files as any)?.[0]?.files ?? []));
+			logger.info(`Uploaded images: ${files.map((file) => file.id).join(', ')}`);
 		}
 
-		await slack.chat.postMessage({
+		const postRes = await slack.chat.postMessage({
 			as_user: true,
 			channel: SANDBOX_ID,
-			text: `${normalizedText} ${permalinks.map((link) => `<${link}| >`).join('')}`,
+			text: `${normalizedText} ${files.map((file) => file.permalink).map((link) => `<${link}| >`).join('')}`,
 		});
 
-		logger.info('Posted Slack status');
+		logger.info(`Posted Slack status: ${postRes.ts}`);
 	}
 
 	response.send('OK');
