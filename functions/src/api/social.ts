@@ -3,6 +3,7 @@ import qs from 'querystring';
 import {Client as ThreadsClient} from '@threadsjs/threads.js';
 import axios from 'axios';
 import {load as cheerio} from 'cheerio';
+import Blob from 'cross-blob';
 import {https, logger, config as getConfig} from 'firebase-functions';
 import FormData from 'form-data';
 import {SANDBOX_ID} from '../const.js';
@@ -153,7 +154,10 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 
 		for (const image of images) {
 			const formData = new FormData();
-			formData.append('file', image.data.buffer, `image.${image.format}`);
+			const blob = new Blob([image.data.buffer], {
+				type: imageFormatToMimeType(image.format)!,
+			});
+			formData.append('file', blob, `image.${image.format}`);
 
 			const res = await axios.post(`https://${config.mastodon.hostname}/api/v2/media`, formData, {
 				headers: {
