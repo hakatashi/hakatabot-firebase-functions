@@ -31,7 +31,7 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 		return;
 	}
 
-	const {text, linkToTweet, token} = qs.parse(request.rawBody.toString());
+	const {text, linkToTweet, token, destinations: rawDestinations = ''} = qs.parse(request.rawBody.toString());
 
 	if (token !== config.api.token) {
 		logger.error('Invalid token');
@@ -60,8 +60,22 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 		return;
 	}
 
+	if (typeof rawDestinations !== 'string') {
+		logger.error('Invalid destinations');
+		response.status(400);
+		response.send('Bad Request');
+		return;
+	}
+
+	const normalizedDestinations = new Set(rawDestinations.split(',').filter((destination) => (
+		['mastodon', 'bluesky', 'threads', 'slack'].includes(destination)
+	)));
+
+	const destinations = normalizedDestinations.size === 0 ? ['mastodon', 'bluesky', 'threads', 'slack'] : [...normalizedDestinations];
+
 	logger.info(`text: ${text}`);
 	logger.info(`link to tweet: ${linkToTweet}`);
+	logger.info(`destinations: ${destinations.join(', ')}`);
 
 	const shortlinks = text.matchAll(/https:\/\/t\.co\/[a-zA-Z0-9]+/g);
 
@@ -147,7 +161,7 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 	}
 
 	// Update Mastodon status
-	{
+	if (destinations.includes('mastodon')) {
 		const mediaIds: string[] = [];
 
 		for (const image of images) {
@@ -183,7 +197,7 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 	}
 
 	// Update Bluesky status
-	{
+	if (destinations.includes('bluesky')) {
 		const res = await axios.post('https://bsky.social/xrpc/com.atproto.server.createSession', JSON.stringify({
 			identifier: config.bluesky.username,
 			password: config.bluesky.password,
@@ -245,7 +259,7 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 	}
 
 	// Update Threads status
-	{
+	if (destinations.includes('threads')) {
 		const client = new ThreadsClient({});
 
 		await client.login(config.threads.username, config.threads.password);
@@ -285,7 +299,7 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 	}
 
 	// Update Slack status
-	{
+	if (destinations.includes('slack')) {
 		const permalinks: string[] = [];
 
 		for (const image of images) {
