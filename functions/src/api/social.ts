@@ -260,7 +260,7 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 	}
 
 	// Update Threads status
-	if (destinations.includes('threads')) {
+	if (destinations.includes('threads') && normalizedText.length > 0) {
 		const client = new ThreadsClient({});
 
 		await client.login(config.threads.username, config.threads.password);
