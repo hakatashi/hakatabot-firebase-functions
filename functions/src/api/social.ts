@@ -1,6 +1,6 @@
 import path from 'path';
 import qs from 'querystring';
-import type {File} from '@slack/web-api/dist/response/FilesUploadResponse.js';
+import type {File} from '@slack/web-api/dist/types/response/FilesUploadResponse.js';
 import {Client as ThreadsClient} from '@threadsjs/threads.js';
 import axios from 'axios';
 import {load as cheerio} from 'cheerio';
@@ -311,7 +311,8 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 				})),
 			});
 
-			files.push(...((res.files as any)?.[0]?.files ?? []));
+			// @ts-expect-error: slack.files.uploadV2 is not well typed
+			files.push(...(res.files?.[0]?.files ?? []));
 			logger.info(`Uploaded images: ${files.map((file) => file.id).join(', ')}`);
 		}
 

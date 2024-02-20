@@ -233,7 +233,6 @@ eventAdapter.on('message', async (message: Message) => {
 
 				await slack.chat.postMessage({
 					channel: message.channel,
-					ts: message.ts,
 					text: `<@${message.user}>をオプトアウトしました`,
 				});
 				return;
@@ -246,7 +245,6 @@ eventAdapter.on('message', async (message: Message) => {
 
 				await slack.chat.postMessage({
 					channel: message.channel,
-					ts: message.ts,
 					username: '今言うな',
 					icon_url: 'https://hakata-public.s3.ap-northeast-1.amazonaws.com/slackbot/una_icon.png',
 					text: `にゃにゃにゃ! <@${message.user}>をオプトインしたにゃ!`,

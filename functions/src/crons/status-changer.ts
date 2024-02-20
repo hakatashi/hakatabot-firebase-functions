@@ -74,12 +74,12 @@ export const updateSlackStatusesCronJob = pubsub.schedule('every 10 minutes').on
 
 		await slack.users.profile.set({
 			token,
-			profile: JSON.stringify({
+			profile: {
 				title: waka,
 				status_text: statusText,
 				status_emoji: statusEmoji,
 				real_name: name,
-			}),
+			},
 		});
 	}
 });
