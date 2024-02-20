@@ -194,7 +194,7 @@ export const itQuizMilestoneProgressCronJob = pubsub
 
 		const imageChartsUrl = await getItQuizStatsImageUrl(timestamp);
 
-		const slackText = `【ITクイズの現在の進捗 (${milestoneCompleted}問突破)】\n完了: ＊${done}問＊ / アイデア: ＊${ideas}問＊`;
+		const slackText = `【ITクイズの現在の進捗 (${milestoneCompleted}問突破🎉)】\n完了: ＊${done}問＊ / アイデア: ＊${ideas}問＊`;
 		await slack.chat.postMessage({
 			channel: IT_QUIZ_ID,
 			username: 'ITクイズ進捗くん',
