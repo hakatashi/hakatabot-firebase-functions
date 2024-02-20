@@ -23,6 +23,8 @@ jobs:
         run: npm install
       - name: Run lint
         run: npm run lint
+      - name: Run TypeScript Check
+        run: npx tsc --noEmit
   deploy:
     name: Deploy
     needs: [test, lint]
