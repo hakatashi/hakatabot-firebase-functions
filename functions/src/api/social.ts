@@ -116,44 +116,37 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 
 	if (hasImage) {
 		const twitterUrl = new URL(linkToTweet.trim());
-		twitterUrl.hostname = config.nitter.hostname;
+		twitterUrl.hostname = 'api.vxtwitter.com';
 
 		logger.info(`Fetching ${twitterUrl.toString()}`);
 
-		const res = await axios.get(twitterUrl.toString());
+		const res = await axios.get(twitterUrl.toString(), {
+			responseType: 'json',
+		});
 
-		const $ = cheerio(res.data);
+		if (res.status !== 200 || res.headers['content-type'] !== 'application/json') {
+			logger.error(`Failed to fetch tweet: status ${res.status}, content-type ${res.headers['content-type']}`);
+			response.status(500);
+			response.send('Internal Server Error');
+			return;
+		}
 
-		for (const $img of $('.still-image').toArray()) {
-			const link = $img.attribs.href;
-			const basename = path.basename(link, path.extname(link));
-			const mediaId = decodeURIComponent(basename).split('/').pop();
-			logger.info(`Found image: ${mediaId}`);
+		for (const mediaUrl of res.data.mediaURLs) {
+			logger.info(`Found image: ${mediaUrl}`);
 
-			let imageData: Buffer | null = null;
-			let imageFormat: string | null = null;
+			const imageUrl = `${mediaUrl}?name=orig`;
+			const imageRes = await axios.get<Buffer>(imageUrl, {
+				responseType: 'arraybuffer',
+				validateStatus: null,
+			});
 
-			for (const format of ['jpg', 'png', 'gif']) {
-				const imageUrl = `https://pbs.twimg.com/media/${mediaId}?format=${format}&name=orig`;
-				const imageRes = await axios.get(imageUrl, {
-					responseType: 'arraybuffer',
-					validateStatus: null,
-				});
-
-				if (imageRes.status === 200) {
-					logger.info(`Found image with format ${format}`);
-					imageData = imageRes.data;
-					imageFormat = format;
-					break;
-				}
-			}
-
-			if (imageData === null || imageFormat === null) {
-				logger.error(`Failed to fetch image: ${mediaId}`);
+			if (imageRes.status !== 200) {
+				logger.error(`Failed to fetch image: ${imageUrl}`);
 				continue;
 			}
 
-			images.push({format: imageFormat, data: imageData});
+			const imageFormat = path.extname(imageUrl).slice(1);
+			images.push({format: imageFormat, data: imageRes.data});
 		}
 
 		if (images.length === 0) {
