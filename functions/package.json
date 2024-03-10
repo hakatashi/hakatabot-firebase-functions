@@ -1,7 +1,7 @@
 {
   "name": "functions",
   "scripts": {
-    "lint": "eslint \"src/**/*\"",
+    "lint": "eslint \"src/**/*\" --color",
     "lint:fix": "npm run lint -- --fix",
     "build": "tsc",
     "build:watch": "npm run build -- --watch",
