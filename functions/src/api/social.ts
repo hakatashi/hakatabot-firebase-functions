@@ -3,7 +3,6 @@ import qs from 'querystring';
 import type {File} from '@slack/web-api/dist/types/response/FilesUploadResponse.js';
 import {Client as ThreadsClient} from '@threadsjs/threads.js';
 import axios from 'axios';
-import {load as cheerio} from 'cheerio';
 import {https, logger, config as getConfig} from 'firebase-functions';
 import {SANDBOX_ID} from '../const.js';
 import {webClient as slack} from '../slack.js';
