@@ -1,3 +1,4 @@
+/* eslint-disable import/no-extraneous-dependencies */
 /* eslint-env jest */
 
 import {jest} from '@jest/globals';
