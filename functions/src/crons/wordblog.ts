@@ -2,6 +2,7 @@ import {Octokit} from '@octokit/rest';
 import axios from 'axios';
 import * as functions from 'firebase-functions';
 import {logger, config as getConfig} from 'firebase-functions';
+import {postBluesky, postMastodon, postThreads} from './lib/social';
 
 const config = getConfig();
 
@@ -225,6 +226,42 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 	});
 
 	logger.info(`done. (commit = ${newRef.object.sha})`);
+
+	logger.info(`done. (commit = ${newRef.object.sha})`);
+
+	logger.info('Waiting for 60 seconds...');
+
+	await new Promise((resolve) => {
+		setTimeout(resolve, 60 * 1000);
+	});
+
+	const url = `https://word.hakatashi.com/${date.replace(/-/g, '')}/`;
+
+	logger.info('Posting to Mastodon...');
+	try {
+		const res = await postMastodon(`hakatashiの一日一語: 「${entry.word}」 ${url}`);
+		logger.info(`done. (id_str = ${res.id})`);
+	} catch (error) {
+		logger.error(`Failed to post to Mastodon: ${error}`);
+	}
+
+	logger.info('Posting to Bluesky...');
+	try {
+		const res = await postBluesky(`hakatashiの一日一語: 「${entry.word}」 ${url}`);
+		logger.info(`done. (id = ${res.id})`);
+	} catch (error) {
+		logger.error(`Failed to post to Bluesky: ${error}`);
+	}
+
+	logger.info('Posting to Threads...');
+	try {
+		const res = await postThreads(`hakatashiの一日一語: 「${entry.word}」 ${url}`);
+		logger.info(`done. (id = ${res.id})`);
+	} catch (error) {
+		logger.error(`Failed to post to Threads: ${error}`);
+	}
+
+	logger.info('done.');
 };
 
 export const updateWordBlog = functions
