@@ -6,7 +6,7 @@
     "outDir": "functions/lib",
     "sourceMap": true,
     "strict": true,
-    "target": "es2021",
+    "target": "ESNext",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "typeRoots": [
