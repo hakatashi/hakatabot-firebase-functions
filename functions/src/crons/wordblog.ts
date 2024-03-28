@@ -2,7 +2,7 @@ import {Octokit} from '@octokit/rest';
 import axios from 'axios';
 import * as functions from 'firebase-functions';
 import {logger, config as getConfig} from 'firebase-functions';
-import {postBluesky, postMastodon, postThreads} from './lib/social';
+import {postBluesky, postMastodon, postThreads} from './lib/social.js';
 
 const config = getConfig();
 
