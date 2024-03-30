@@ -58,6 +58,35 @@ export const postMastodon = async (text: string, images: Image[] = []) => {
 	return res.data;
 };
 
+interface BlueskySpan {
+	start: number,
+	end: number,
+	url: string,
+}
+
+export const parseBlueskyUrls = (text: string) => {
+	const spans: BlueskySpan[] = [];
+	const urlRegex = /(?<prefix>[$|\W])(?<url>https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_+.~#?&//=]*[-a-zA-Z0-9@%_+~#//=])?)/g;
+
+	let match: RegExpExecArray | null = null;
+	while (
+		(match = urlRegex.exec(text)) !== null &&
+		match.groups?.url !== undefined &&
+		match.groups?.prefix !== undefined
+	) {
+		const bytesStart = Buffer.byteLength(text.slice(0, match.index));
+		const prefixLength = Buffer.byteLength(match.groups.prefix);
+		const urlLength = Buffer.byteLength(match.groups.url);
+		spans.push({
+			start: bytesStart + prefixLength,
+			end: bytesStart + prefixLength + urlLength,
+			url: match.groups.url,
+		});
+	}
+
+	return spans;
+};
+
 export const postBluesky = async (text: string, images: Image[] = []) => {
 	const res = await axios.post('https://bsky.social/xrpc/com.atproto.server.createSession', JSON.stringify({
 		identifier: config.bluesky.username,
@@ -90,6 +119,8 @@ export const postBluesky = async (text: string, images: Image[] = []) => {
 		blobs.push(uploadRes.data.blob);
 	}
 
+	const spans = parseBlueskyUrls(text);
+
 	const postRes = await axios.post('https://bsky.social/xrpc/com.atproto.repo.createRecord', JSON.stringify({
 		repo: config.bluesky.username,
 		collection: 'app.bsky.feed.post',
@@ -105,6 +136,20 @@ export const postBluesky = async (text: string, images: Image[] = []) => {
 						image: blob,
 					})),
 				},
+			} : {}),
+			...(spans.length > 0 ? {
+				facets: spans.map((span) => ({
+					index: {
+						byteStart: span.start,
+						byteEnd: span.end,
+					},
+					features: [
+						{
+							$type: 'app.bsky.richtext.facet#link',
+							uri: span.url,
+						},
+					],
+				})),
 			} : {}),
 		},
 	}), {
