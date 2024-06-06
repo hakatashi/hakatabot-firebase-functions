@@ -337,7 +337,7 @@ export const postGenshinSerialCodesCronJob = pubsub.schedule('every 20 minutes')
 	logger.info(`postGenshinSerialCodesCronJob: Found ${newSerialCodes.length} new serial codes`);
 	logger.info(`postGenshinSerialCodesCronJob: isFirstRun = ${result.isFirstRun}`);
 
-	if (!result.isFirstRun) {
+	if (!result.isFirstRun && newSerialCodes.length > 0) {
 		const serialCodesByGame = groupBy(newSerialCodes, 'game');
 
 		const blocks: KnownBlock[] = [
