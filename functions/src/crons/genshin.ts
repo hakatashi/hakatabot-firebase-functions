@@ -37,7 +37,7 @@ const getGameWithSerialCodeSelector = (url: string) => {
 	if (url.startsWith('https://gamewith.jp/houkaistarrail/')) {
 		return '.housta_droptable table tbody tr:not(:first-child)';
 	}
-	assert(false, `Unknown URL: ${url}`);
+	throw new Error(`Unknown URL: ${url}`);
 };
 
 const getGameWithSerialCodes = async (url: string) => {
