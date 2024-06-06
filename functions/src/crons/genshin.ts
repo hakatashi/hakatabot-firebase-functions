@@ -304,6 +304,7 @@ export const postGenshinSerialCodesCronJob = pubsub.schedule('every 20 minutes')
 
 	const result = await db.runTransaction(async (transaction) => {
 		let isFirstRun = false;
+		let hasUpdate = false;
 
 		const state = await transaction.get(stateDoc);
 		if (!state.exists) {
@@ -320,6 +321,8 @@ export const postGenshinSerialCodesCronJob = pubsub.schedule('every 20 minutes')
 
 				newSerialCodes.push({game, code, description, source});
 
+				hasUpdate = true;
+
 				lastSerialCodes[code] = {
 					game,
 					description,
@@ -329,7 +332,9 @@ export const postGenshinSerialCodesCronJob = pubsub.schedule('every 20 minutes')
 			}
 		}
 
-		transaction.set(stateDoc, {serialCodes: lastSerialCodes}, {merge: true});
+		if (hasUpdate) {
+			transaction.set(stateDoc, {serialCodes: lastSerialCodes}, {merge: true});
+		}
 
 		return {isFirstRun};
 	});
