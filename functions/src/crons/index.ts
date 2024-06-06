@@ -7,3 +7,4 @@ export * from './morning-report.js';
 export * from './rinna-ping.js';
 export * from './it-quiz.js';
 export * from './tsgctf-platform.js';
+export * from './genshin.js';
