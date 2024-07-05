@@ -389,6 +389,8 @@ export const postGenshinSerialCodesCronJob = pubsub.schedule('every 20 minutes')
 				icon_url: 'https://pbs.twimg.com/media/Eh8ugAaU4AEe0qd?format=png&name=small',
 				username: 'パイモン',
 				blocks: blocksChunk,
+				unfurl_links: false,
+				unfurl_media: false,
 			});
 		}
 	}
