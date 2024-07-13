@@ -37,6 +37,9 @@ const getGameWithSerialCodeSelector = (url: string) => {
 	if (url.startsWith('https://gamewith.jp/houkaistarrail/')) {
 		return '.housta_droptable table tbody tr:not(:first-child)';
 	}
+	if (url.startsWith('https://gamewith.jp/zenless/')) {
+		return '.zzz_code table tbody tr:not(:first-child)';
+	}
 	throw new Error(`Unknown URL: ${url}`);
 };
 
@@ -92,7 +95,7 @@ const getGame8SerialCodes = async (url: string) => {
 			listItem: 'table',
 			data: {
 				rows: {
-					listItem: 'tr:not(:first-child)',
+					listItem: 'tr',
 					data: {
 						cells: {
 							listItem: 'td',
@@ -110,6 +113,7 @@ const getGame8SerialCodes = async (url: string) => {
 	});
 
 	const serialCodes: SerialCode[] = [];
+	const isZenless = url.startsWith('https://game8.jp/zenless/');
 
 	if (url.startsWith('https://game8.jp/genshin/')) {
 		for (const table of data.tables) {
@@ -143,9 +147,14 @@ const getGame8SerialCodes = async (url: string) => {
 				if (row.cells.length < 2) {
 					continue;
 				}
-				const code = row.cells[0].text.split('\n')[0].trim();
-				const additionalInfo = row.cells[0].text.split('\n').slice(1).join('\n').trim();
-				if (!code.match(/^[A-Z0-9]+$/)) {
+				const cell = isZenless ? row.cells[1] : row.cells[0];
+				if (!cell) {
+					continue;
+				}
+				const lines = cell.text.split('\n');
+				const code = isZenless ? lines.slice(-2)[0]?.trim() : lines[0]?.trim();
+				const additionalInfo = isZenless ? '' : lines.slice(1).join('\n').trim();
+				if (!code?.match(/^[A-Z0-9]+$/)) {
 					continue;
 				}
 				serialCodes.push({
@@ -263,6 +272,9 @@ const getMarkupedSerialCode = (game: string, code: string) => {
 	if (game === '崩壊:スターレイル') {
 		return `<https://hsr.hoyoverse.com/gift?code=${code}|*${code}*>`;
 	}
+	if (game === 'ゼンレスゾーンゼロ') {
+		return `<https://zenless.hoyoverse.com/redemption/gift?code=${code}|*${code}*>`;
+	}
 	return code;
 };
 
@@ -294,6 +306,14 @@ export const postGenshinSerialCodesCronJob = pubsub.schedule('every 20 minutes')
 				...await getGameWithSerialCodes('https://gamewith.jp/wutheringwaves/451073'),
 				...await getGame8SerialCodes('https://game8.jp/meicho/610907'),
 				...await getAltemaSerialCodes('https://altema.jp/meichou/code'),
+			],
+		},
+		{
+			game: 'ゼンレスゾーンゼロ',
+			serialCodes: [
+				...await getGameWithSerialCodes('https://gamewith.jp/zenless/452252'),
+				...await getGame8SerialCodes('https://game8.jp/zenless/607577'),
+				...await getAltemaSerialCodes('https://altema.jp/zenless/serialcode'),
 			],
 		},
 	];
