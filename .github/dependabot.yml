@@ -11,3 +11,4 @@ updates:
     ignore:
       - dependency-name: "chart.js"
       - dependency-name: "@types/chart.js"
+      - dependency-name: "cheerio"

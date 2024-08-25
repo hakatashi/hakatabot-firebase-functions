@@ -26,7 +26,7 @@
     "@threadsjs/threads.js": "^1.9.0",
     "@unicode/unicode-14.0.0": "^1.5.2",
     "axios": "^1.7.5",
-    "cheerio": "<1.0.0",
+    "cheerio": "^1.0.0",
     "cloudinary": "^2.4.0",
     "common-tags": "^1.8.2",
     "dayjs": "^1.11.13",
