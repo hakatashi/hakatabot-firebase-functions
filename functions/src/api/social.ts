@@ -94,8 +94,6 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 		}
 	}
 
-	normalizedText = normalizedText.replace(/\s+/g, ' ').trim();
-
 	logger.info(`Normalized text: ${normalizedText}`);
 
 	const images: {format: string, data: Buffer}[] = [];

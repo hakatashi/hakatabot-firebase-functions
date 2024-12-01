@@ -18,6 +18,15 @@ const imageFormatToMimeType = (format: string) => {
 	return null;
 };
 
+const htmlEscape = (text: string) => (
+	text
+		.replaceAll('&', '&amp;')
+		.replaceAll('<', '&lt;')
+		.replaceAll('>', '&gt;')
+		.replaceAll('"', '&quot;')
+		.replaceAll('\'', '&#39;')
+);
+
 interface Image {
 	data: Buffer,
 	format: string,
@@ -25,6 +34,8 @@ interface Image {
 
 export const postMastodon = async (text: string, images: Image[] = []) => {
 	const mediaIds: string[] = [];
+
+	const escapedText = htmlEscape(text).replaceAll('\n', '<br>');
 
 	for (const image of images) {
 		const formData = new FormData();
@@ -45,7 +56,7 @@ export const postMastodon = async (text: string, images: Image[] = []) => {
 	}
 
 	const res = await axios.post(`https://${config.mastodon.hostname}/api/v1/statuses`, JSON.stringify({
-		status: text,
+		status: escapedText,
 		visibility: 'public',
 		media_ids: mediaIds,
 	}), {
