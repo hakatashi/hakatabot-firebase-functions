@@ -22,7 +22,7 @@
     "@octokit/rest": "^21.0.2",
     "@slack/events-api": "^3.0.1",
     "@slack/web-api": "^7.7.0",
-    "@slack/webhook": "^7.0.3",
+    "@slack/webhook": "^7.0.4",
     "@threadsjs/threads.js": "^1.9.0",
     "@unicode/unicode-14.0.0": "^1.6.5",
     "axios": "^1.7.9",
