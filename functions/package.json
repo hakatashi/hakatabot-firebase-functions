@@ -19,7 +19,7 @@
   "dependencies": {
     "@google-cloud/functions-framework": "^3.4.5",
     "@google-cloud/pubsub": "^4.9.0",
-    "@octokit/rest": "^21.0.2",
+    "@octokit/rest": "^21.1.0",
     "@slack/events-api": "^3.0.1",
     "@slack/web-api": "^7.8.0",
     "@slack/webhook": "^7.0.4",
