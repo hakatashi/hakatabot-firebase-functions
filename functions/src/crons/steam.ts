@@ -90,43 +90,56 @@ export const onSteamFriendStatusChanged = firestore.document('steam-friends/{ste
 	if (before?.gameid !== after?.gameid && after?.gameid) {
 		logger.info(`Game changed: ${before?.gameid} -> ${after?.gameid}`);
 
-		const {data: gameSchema} = await axios('https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2', {
-			params: {
-				key: config.steam.api_key,
-				appid: after.gameid,
-				l: 'japanese',
-				format: 'json',
-			},
-		});
+		let gameName: string | undefined = after?.gameextrainfo;
+		let mergedPlayerStats: (PlayerStat & {displayName: string})[] = [];
 
-		const gameStats: GameStat[] = gameSchema?.game?.availableGameStats?.stats ?? [];
-		const gameName: string = gameSchema?.game?.gameName ?? after?.gameextrainfo;
+		try {
+			const {data: gameSchema} = await axios('https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2', {
+				params: {
+					key: config.steam.api_key,
+					appid: after.gameid,
+					l: 'japanese',
+					format: 'json',
+				},
+			});
 
-		logger.info(`Fetched game stats: ${gameStats.length}`);
+			const gameStats: GameStat[] = gameSchema?.game?.availableGameStats?.stats ?? [];
+			if (gameSchema?.game?.gameName) {
+				gameName = gameSchema?.game?.gameName;
+			}
 
-		const {data: userStats} = await axios('https://api.steampowered.com/ISteamUserStats/GetUserStatsForGame/v2', {
-			params: {
-				key: config.steam.api_key,
-				steamid: after.steamid,
-				appid: after.gameid,
-				format: 'json',
-			},
-		});
+			logger.info(`Fetched game stats: ${gameStats.length}`);
 
-		const playerStats: PlayerStat[] = userStats?.playerstats?.stats ?? [];
+			const {data: userStats} = await axios('https://api.steampowered.com/ISteamUserStats/GetUserStatsForGame/v2', {
+				params: {
+					key: config.steam.api_key,
+					steamid: after.steamid,
+					appid: after.gameid,
+					format: 'json',
+				},
+			});
 
-		logger.info(`Fetched player stats: ${playerStats.length}`);
+			const playerStats: PlayerStat[] = userStats?.playerstats?.stats ?? [];
 
-		const mergedPlayerStats = playerStats.map((stat) => {
-			const gameStat = gameStats.find((gs) => gs.name === stat.name);
-			return {
-				name: stat.name,
-				value: stat.value,
-				displayName: gameStat?.displayName ?? stat.name,
-			};
-		});
+			logger.info(`Fetched player stats: ${playerStats.length}`);
 
-		const message = `＊${after.personaname}＊が＊${gameName}＊をプレイ中`;
+			mergedPlayerStats = playerStats.map((stat) => {
+				const gameStat = gameStats.find((gs) => gs.name === stat.name);
+				return {
+					name: stat.name,
+					value: stat.value,
+					displayName: gameStat?.displayName ?? stat.name,
+				};
+			});
+		} catch (error) {
+			logger.error('Failed to fetch game stats', error);
+		}
+
+		const appUrl = `https://store.steampowered.com/app/${after.gameid}`;
+		const gameLink = `<${appUrl}|${gameName}>`;
+		const userLink = `<${after.profileurl}|${after.personaname}>`;
+
+		const message = `＊${userLink}＊が＊${gameLink}＊をプレイ中`;
 
 		const fields = mergedPlayerStats.map((stat) => ({
 			type: 'plain_text' as const,
@@ -140,6 +153,7 @@ export const onSteamFriendStatusChanged = firestore.document('steam-friends/{ste
 			// eslint-disable-next-line no-underscore-dangle, private-props/no-use-outside
 			channel: config.slack.channels._hakatashi,
 			text: message,
+			icon_url: after.avatarfull,
 			blocks: [
 				{
 					type: 'section',
