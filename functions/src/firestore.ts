@@ -18,6 +18,7 @@ export const FitbitSleeps = db.collection('fitbit-sleeps');
 export const AnimeWatchRecords = db.collection('anime-watch-records');
 export const ItQuizProgressStats = db.collection('it-quiz-progress-stats') as CollectionReference<ItQuizProgressStat>;
 export const States = db.collection('states');
+export const SteamFriends = db.collection('steam-friends');
 
 export class State {
 	doc: DocumentReference;
