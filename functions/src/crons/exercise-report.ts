@@ -4,12 +4,12 @@ import {logger, pubsub, firestore} from 'firebase-functions';
 import last from 'lodash/last.js';
 import {FITNESS_ID} from '../const.js';
 import {AnimeWatchRecords, FitbitActivities} from '../firestore.js';
-import * as fitbit from '../fitbit.js';
+import {get} from '../fitbit.js';
 import {webClient as slack} from '../slack.js';
 
 export const exerciseGetCronJob = pubsub.schedule('every 5 minutes').onRun(async (event) => {
 	logger.info('Getting fitbit activities...');
-	const res = await fitbit.get('/1/user/-/activities/list.json', {
+	const res = await get('/1/user/-/activities/list.json', {
 		afterDate: '1970-01-01',
 		sort: 'desc',
 		limit: 100,
@@ -51,7 +51,6 @@ export const exercisePostCronJob = firestore.document('fitbit-activities/{logId}
 
 			let animeInfo = '';
 			if (!animeWatchRecord.empty) {
-				// eslint-disable-next-line prefer-destructuring
 				const record = animeWatchRecord.docs[0];
 				const date = record.get('date');
 				if (date >= now - 60 * 60 * 1000) {
@@ -67,7 +66,7 @@ export const exercisePostCronJob = firestore.document('fitbit-activities/{logId}
 			}
 
 			const today = dayjs().tz('Asia/Tokyo').format('YYYY-MM-DD');
-			const weightsResponse = await fitbit.get(`/1/user/-/body/log/weight/date/${today}/1m.json`, {});
+			const weightsResponse = await get(`/1/user/-/body/log/weight/date/${today}/1m.json`, {});
 			const latestWeight = (last(weightsResponse?.weight ?? []) as any)?.weight;
 
 			const rawExerciseMinutes = duration / 60 / 1000;

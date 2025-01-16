@@ -101,7 +101,6 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 			if (indentLevel === 1) {
 				if (word !== '') {
 					entries.push({word, ruby, descriptions, cite});
-					word = '';
 					ruby = '';
 					descriptions = [];
 					cite = '';

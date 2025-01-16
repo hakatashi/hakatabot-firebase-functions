@@ -1,4 +1,4 @@
-import assert from 'assert';
+import assert from 'node:assert';
 import {KnownBlock} from '@slack/web-api';
 import type {CollectionReference, DocumentData} from 'firebase-admin/firestore';
 import {logger, pubsub, config as getConfig} from 'firebase-functions';
@@ -255,14 +255,12 @@ const getAltemaSerialCodes = async (url: string) => {
 };
 
 interface GenshinSerialCodesState extends DocumentData {
-	serialCodes: {
-		[code: string]: {
+	serialCodes: Record<string, {
 			game: string,
 			description: string,
 			source: string,
 			createdAt: number,
-		},
-	},
+		}>,
 }
 
 const getMarkupedSerialCode = (game: string, code: string) => {

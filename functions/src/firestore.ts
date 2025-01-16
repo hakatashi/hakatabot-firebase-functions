@@ -27,7 +27,7 @@ export class State {
 		this.doc = States.doc(name);
 	}
 
-	set(value: {[name: string]: any}) {
+	set(value: Record<string, any>) {
 		return this.doc.set(value, {merge: true});
 	}
 
