@@ -52,7 +52,7 @@ export const updateSlackStatusesCronJob = pubsub.schedule('every 10 minutes').on
 
 	const emojis = emojiData.all();
 
-	for (const token of Object.values(config.slack.tokens as {[key: string]: string})) {
+	for (const token of Object.values(config.slack.tokens as Record<string, string>)) {
 		const {team} = await slack.team.info({token});
 		logger.info(`Updating status for team ${team?.name}...`);
 

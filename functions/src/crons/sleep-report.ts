@@ -7,7 +7,7 @@ import {logger, pubsub} from 'firebase-functions';
 import get from 'lodash/get.js';
 import {SANDBOX_ID} from '../const.js';
 import {FitbitSleeps} from '../firestore.js';
-import * as fitbit from '../fitbit.js';
+import {get as fitbitGet} from '../fitbit.js';
 import {webClient as slack} from '../slack.js';
 
 dayjs.extend(utc);
@@ -16,7 +16,7 @@ dayjs.extend(timezone);
 export const sleepGetCronJob = pubsub.schedule('every 5 minutes').onRun(async (event) => {
 	logger.info('Getting fitbit activities...');
 
-	const res = await fitbit.get('/1.2/user/-/sleep/list.json', {
+	const res = await fitbitGet('/1.2/user/-/sleep/list.json', {
 		beforeDate: '2100-01-01',
 		sort: 'desc',
 		limit: 100,

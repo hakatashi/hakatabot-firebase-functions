@@ -1,11 +1,11 @@
 import {https, logger} from 'firebase-functions';
 import get from 'lodash/get.js';
 import last from 'lodash/last.js';
-import * as fitbit from '../fitbit.js';
+import {get as fitbitGet} from '../fitbit.js';
 
 export const fitbitLatestHeartBeatRate = https.onRequest(async (request, response) => {
 	logger.info('Getting fitbit heart rate history...');
-	const res = await fitbit.get('/1/user/-/activities/heart/date/today/1d/5min.json', {});
+	const res = await fitbitGet('/1/user/-/activities/heart/date/today/1d/5min.json', {});
 
 	const history: {value: number}[] = get(res, ['activities-heart-intraday', 'dataset'], []);
 	logger.info(`Retrieved ${history.length} datapoints of heart rate`);

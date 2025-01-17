@@ -443,13 +443,13 @@ eventAdapter.on('message', async (message: Message) => {
 	}
 
 	const tokens = message.text.split(' ');
-	// eslint-disable-next-line prefer-destructuring
+
 	const operation = tokens[1];
 	const user = tokens.slice(2).join(' ');
 
 	const state = new State('sleep-battle-cron-job');
 	let optoutUsers = await state.get('optoutUsers', [] as string[]);
-	const slackUsers = await state.get('slackUsers', Object.create(null) as {[slackId: string]: string});
+	const slackUsers = await state.get('slackUsers', Object.create(null) as Record<string, string>);
 	if (operation === 'optin') {
 		optoutUsers = optoutUsers.filter((u) => u !== user);
 	} else if (operation === 'optout') {

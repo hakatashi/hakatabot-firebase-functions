@@ -1,5 +1,5 @@
-import path from 'path';
-import qs from 'querystring';
+import path from 'node:path';
+import qs from 'node:querystring';
 import type {File} from '@slack/web-api/dist/types/response/FilesUploadResponse.js';
 import axios from 'axios';
 import {https, logger, config as getConfig} from 'firebase-functions';

@@ -1,4 +1,4 @@
-import qs from 'querystring';
+import qs from 'node:querystring';
 import download from 'download';
 import get from 'lodash/get.js';
 import sample from 'lodash/sample.js';
@@ -51,7 +51,7 @@ export const getWaka = async () => {
 	let number = null;
 	let author = null;
 	let text = null;
-	let results = null;
+	let results;
 
 	const wakas = [];
 
@@ -63,7 +63,6 @@ export const getWaka = async () => {
 		}
 
 		if ((results = line.match(/\d+/))) {
-			// eslint-disable-next-line prefer-destructuring
 			number = results[0];
 			author = null;
 			text = null;

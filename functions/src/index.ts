@@ -1,4 +1,4 @@
-import assert from 'assert';
+import assert from 'node:assert';
 import {https} from 'firebase-functions';
 import {google} from 'googleapis';
 import {GoogleTokens, FitbitTokens, AnimeWatchRecords} from './firestore.js';

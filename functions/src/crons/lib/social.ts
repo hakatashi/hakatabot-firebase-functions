@@ -1,4 +1,4 @@
-import qs from 'querystring';
+import qs from 'node:querystring';
 import {Client as ThreadsClient} from '@threadsjs/threads.js';
 import axios from 'axios';
 import {logger, config as getConfig} from 'firebase-functions';
@@ -79,9 +79,9 @@ export const parseBlueskyUrls = (text: string) => {
 	const spans: BlueskySpan[] = [];
 	const urlRegex = /(?<prefix>[$|\W])(?<url>https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_+.~#?&//=]*[-a-zA-Z0-9@%_+~#//=])?)/g;
 
-	let match: RegExpExecArray | null = null;
+	let match: RegExpExecArray | undefined;
 	while (
-		(match = urlRegex.exec(text)) !== null &&
+		(match = urlRegex.exec(text) ?? undefined) !== undefined &&
 		match.groups?.url !== undefined &&
 		match.groups?.prefix !== undefined
 	) {
