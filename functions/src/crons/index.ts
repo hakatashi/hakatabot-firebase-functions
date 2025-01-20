@@ -7,4 +7,4 @@ export * from './rinna-ping.js';
 export * from './it-quiz.js';
 export * from './tsgctf-platform.js';
 export * from './genshin.js';
-export * from './steam.js';
+// export * from './steam.js';
