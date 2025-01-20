@@ -2,14 +2,14 @@ import path from 'node:path';
 import qs from 'node:querystring';
 import type {File} from '@slack/web-api/dist/types/response/FilesUploadResponse.js';
 import axios from 'axios';
-import {config as getConfig} from 'firebase-functions';
 import {info as logInfo, error as logError} from 'firebase-functions/logger';
+import {defineString} from 'firebase-functions/params';
 import {onRequest} from 'firebase-functions/v2/https';
 import {SANDBOX_ID} from '../const.js';
 import {postBluesky, postMastodon, postThreads} from '../crons/lib/social.js';
 import {webClient as slack} from '../slack.js';
 
-const config = getConfig();
+const API_TOKEN = defineString('API_TOKEN');
 
 export const updateSocialPost = onRequest(async (request, response) => {
 	logInfo('updateSocialPost started');
@@ -22,7 +22,7 @@ export const updateSocialPost = onRequest(async (request, response) => {
 
 	const {text, linkToTweet, token, destinations: rawDestinations = ''} = qs.parse(request.rawBody.toString());
 
-	if (token !== config.api.token) {
+	if (token !== API_TOKEN.value()) {
 		logError('Invalid token');
 		response.status(403);
 		response.send('Forbidden');

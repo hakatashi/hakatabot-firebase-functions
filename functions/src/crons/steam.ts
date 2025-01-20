@@ -1,12 +1,14 @@
 import axios from 'axios';
-import {config as getConfig} from 'firebase-functions';
 import {info as logInfo, error as logError} from 'firebase-functions/logger';
+import {defineString} from 'firebase-functions/params';
 import {onDocumentUpdated} from 'firebase-functions/v2/firestore';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 import {SteamFriends, db} from '../firestore.js';
 import {webClient as slack} from '../slack.js';
 
-const config = getConfig();
+const STEAM_API_KEY = defineString('STEAM_API_KEY');
+const STEAM_HAKATASHI_ID = defineString('STEAM_HAKATASHI_ID');
+const SLACK_CHANNELS__HAKATASHI = defineString('SLACK_CHANNELS__HAKATASHI');
 
 interface GetFriendListResponse {
 	friendslist: {
@@ -37,8 +39,8 @@ export const updateSteamFriendsCronJob = onSchedule('every 5 minutes', async () 
 
 	const {data: friends} = await axios<GetFriendListResponse>('https://api.steampowered.com/ISteamUser/GetFriendList/v1', {
 		params: {
-			key: config.steam.api_key,
-			steamid: config.steam.hakatashi_id,
+			key: STEAM_API_KEY.value(),
+			steamid: STEAM_HAKATASHI_ID.value(),
 			relationship: 'friend',
 			format: 'json',
 		},
@@ -50,7 +52,7 @@ export const updateSteamFriendsCronJob = onSchedule('every 5 minutes', async () 
 
 	const {data: players} = await axios<GetPlayerSummariesResponse>('https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2', {
 		params: {
-			key: config.steam.api_key,
+			key: STEAM_API_KEY.value(),
 			steamids: steamIds.join(','),
 			format: 'json',
 		},
@@ -99,7 +101,7 @@ export const onSteamFriendStatusChanged = onDocumentUpdated('steam-friends/{stea
 		try {
 			const {data: gameSchema} = await axios('https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2', {
 				params: {
-					key: config.steam.api_key,
+					key: STEAM_API_KEY.value(),
 					appid: after.gameid,
 					l: 'japanese',
 					format: 'json',
@@ -115,7 +117,7 @@ export const onSteamFriendStatusChanged = onDocumentUpdated('steam-friends/{stea
 
 			const {data: userStats} = await axios('https://api.steampowered.com/ISteamUserStats/GetUserStatsForGame/v2', {
 				params: {
-					key: config.steam.api_key,
+					key: STEAM_API_KEY.value(),
 					steamid: after.steamid,
 					appid: after.gameid,
 					format: 'json',
@@ -153,8 +155,8 @@ export const onSteamFriendStatusChanged = onDocumentUpdated('steam-friends/{stea
 		logInfo(`Posting message: ${message}`);
 
 		const postedMessage = await slack.chat.postMessage({
-			// eslint-disable-next-line no-underscore-dangle, private-props/no-use-outside
-			channel: config.slack.channels._hakatashi,
+
+			channel: SLACK_CHANNELS__HAKATASHI.value(),
 			text: message,
 			icon_url: after.avatarfull,
 			blocks: [

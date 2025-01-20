@@ -1,12 +1,13 @@
 import {Octokit} from '@octokit/rest';
 import axios from 'axios';
-import {config as getConfig} from 'firebase-functions';
 import {info as logInfo, error as logError} from 'firebase-functions/logger';
+import {defineString} from 'firebase-functions/params';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 import type {ScheduledEvent} from 'firebase-functions/v2/scheduler';
 import {postBluesky, postMastodon, postThreads} from './lib/social.js';
 
-const config = getConfig();
+const GITHUB_TOKEN = defineString('GITHUB_TOKEN');
+const SCRAPBOX_SID = defineString('SCRAPBOX_SID');
 
 interface ScrapboxUser {
 	id: string,
@@ -49,7 +50,7 @@ interface Entry {
 }
 
 const github = new Octokit({
-	auth: config.github.token,
+	auth: GITHUB_TOKEN.value(),
 });
 
 const getCite = (cite: string, word: string) => {
@@ -80,7 +81,7 @@ const updateWordBlogFunction = async (context: ScheduledEvent) => {
 
 	const scrapboxUrl = `https://scrapbox.io/api/pages/hakatashi/${encodeURIComponent('日本語')}`;
 	const {data} = await axios.get<ScrapboxPage>(scrapboxUrl, {
-		headers: {Cookie: `connect.sid=${config.scrapbox.sid}`},
+		headers: {Cookie: `connect.sid=${SCRAPBOX_SID.value()}`},
 	});
 	logInfo(`Retrieved ${data.lines.length} lines from Scrapbox`);
 

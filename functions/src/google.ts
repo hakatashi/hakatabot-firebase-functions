@@ -1,16 +1,17 @@
-import {config as getConfig} from 'firebase-functions';
 import {info as logInfo} from 'firebase-functions/logger';
+import {defineString} from 'firebase-functions/params';
 import {google} from 'googleapis';
 import {HAKATASHI_EMAIL} from './const.js';
 import {GoogleTokens} from './firestore.js';
 
-const config = getConfig();
+const GOOGLE_CLIENT_ID = defineString('GOOGLE_CLIENT_ID');
+const GOOGLE_CLIENT_SECRET = defineString('GOOGLE_CLIENT_SECRET');
 
 const oauth2 = google.oauth2('v2');
 
 export const oauth2Client = new google.auth.OAuth2(
-	config.google.client_id,
-	config.google.client_secret,
+	GOOGLE_CLIENT_ID.value(),
+	GOOGLE_CLIENT_SECRET.value(),
 	'https://us-central1-hakatabot-firebase-functions.cloudfunctions.net/googleApiOauthCallback',
 );
 

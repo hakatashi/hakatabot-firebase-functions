@@ -1,9 +1,9 @@
 import {PubSub} from '@google-cloud/pubsub';
-import {config as getConfig} from 'firebase-functions';
 import {info as logInfo, error as logError} from 'firebase-functions/logger';
+import {defineString} from 'firebase-functions/params';
 import {onRequest} from 'firebase-functions/v2/https';
 
-const config = getConfig();
+const API_TOKEN = defineString('API_TOKEN');
 
 export const googleFormLlmBenchmarkSubmission = onRequest(async (request, response) => {
 	logInfo('googleFormLlmBenchmarkSubmission started');
@@ -17,7 +17,7 @@ export const googleFormLlmBenchmarkSubmission = onRequest(async (request, respon
 
 	const data = request.body;
 
-	if (data.token !== config.api.token) {
+	if (data.token !== API_TOKEN.value()) {
 		logError('Invalid token');
 		response.status(403);
 		response.send('Forbidden');

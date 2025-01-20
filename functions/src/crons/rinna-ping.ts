@@ -1,10 +1,12 @@
 import {PubSub, Message} from '@google-cloud/pubsub';
 import axios from 'axios';
-import {config as getConfig} from 'firebase-functions';
 import {info as logInfo, error as logError} from 'firebase-functions/logger';
+import {defineString} from 'firebase-functions/params';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 
-const config = getConfig();
+const STATUSPAGE_PAGE_ID = defineString('STATUSPAGE_PAGE_ID');
+const STATUSPAGE_COMPONENT_ID = defineString('STATUSPAGE_COMPONENT_ID');
+const STATUSPAGE_TOKEN = defineString('STATUSPAGE_TOKEN');
 
 const pubsubClient = new PubSub();
 
@@ -74,13 +76,13 @@ export const rinnaPingCronJob = onSchedule('every 5 minutes', async () => {
 
 		logInfo(`Posting status (mode = ${pongMessage.mode}, status = ${status})`);
 		await axios.patch(
-			`https://api.statuspage.io/v1/pages/${config.statuspage.page_id}/components/${config.statuspage.component_id}`,
+			`https://api.statuspage.io/v1/pages/${STATUSPAGE_PAGE_ID.value()}/components/${STATUSPAGE_COMPONENT_ID.value()}`,
 			{
 				component: {status},
 			},
 			{
 				headers: {
-					Authorization: `OAuth ${config.statuspage.token}`,
+					Authorization: `OAuth ${STATUSPAGE_TOKEN.value()}`,
 				},
 			},
 		);
@@ -89,7 +91,7 @@ export const rinnaPingCronJob = onSchedule('every 5 minutes', async () => {
 
 		logInfo('Posting status (status = major_outage)');
 		await axios.patch(
-			`https://api.statuspage.io/v1/pages/${config.statuspage.page_id}/components/${config.statuspage.component_id}`,
+			`https://api.statuspage.io/v1/pages/${STATUSPAGE_PAGE_ID.value()}/components/${STATUSPAGE_COMPONENT_ID.value()}`,
 			{
 				component: {
 					status: 'major_outage',
@@ -97,7 +99,7 @@ export const rinnaPingCronJob = onSchedule('every 5 minutes', async () => {
 			},
 			{
 				headers: {
-					Authorization: `OAuth ${config.statuspage.token}`,
+					Authorization: `OAuth ${STATUSPAGE_TOKEN.value()}`,
 				},
 			},
 		);
