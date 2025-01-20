@@ -1,4 +1,5 @@
-import {https, logger} from 'firebase-functions';
+import {info as logInfo} from 'firebase-functions/logger';
+import {onRequest} from 'firebase-functions/v2/https';
 import {google} from 'googleapis';
 import {BILLBOARD_HOT100_ID} from '../const.js';
 import {getGoogleAuth} from '../google.js';
@@ -6,7 +7,7 @@ import {getGoogleAuth} from '../google.js';
 // initialize the Youtube API library
 const youtube = google.youtube('v3');
 
-export const latestBillboardJapanHot100 = https.onRequest(async (request, response) => {
+export const latestBillboardJapanHot100 = onRequest(async (request, response) => {
 	const auth = await getGoogleAuth();
 	const data = await youtube.channelSections.list({
 		id: [BILLBOARD_HOT100_ID],
@@ -15,7 +16,7 @@ export const latestBillboardJapanHot100 = https.onRequest(async (request, respon
 	});
 	const playlists: string[] = data?.data?.items?.[0]?.contentDetails?.playlists ?? [];
 
-	logger.info(`Retrieved ${playlists.length} playlists`);
+	logInfo(`Retrieved ${playlists.length} playlists`);
 
 	if (playlists.length === 0) {
 		response.status(500);

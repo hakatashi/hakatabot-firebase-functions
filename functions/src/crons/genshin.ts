@@ -1,7 +1,9 @@
 import assert from 'node:assert';
 import {KnownBlock} from '@slack/web-api';
 import type {CollectionReference, DocumentData} from 'firebase-admin/firestore';
-import {logger, pubsub, config as getConfig} from 'firebase-functions';
+import {config as getConfig} from 'firebase-functions';
+import {info as logInfo} from 'firebase-functions/logger';
+import {onSchedule} from 'firebase-functions/v2/scheduler';
 import chunk from 'lodash/chunk.js';
 import groupBy from 'lodash/groupBy.js';
 import scrapeIt from 'scrape-it';
@@ -44,7 +46,7 @@ const getGameWithSerialCodeSelector = (url: string) => {
 };
 
 const getGameWithSerialCodes = async (url: string) => {
-	logger.info(`getGameWithSerialCodes: ${url}`);
+	logInfo(`getGameWithSerialCodes: ${url}`);
 
 	assert(url.startsWith('https://gamewith.jp/'));
 
@@ -66,7 +68,7 @@ const getGameWithSerialCodes = async (url: string) => {
 		},
 	});
 
-	logger.info(`getGameWithSerialCodes: Retrieved ${data.serialCodes.length} serial codes from ${url}`);
+	logInfo(`getGameWithSerialCodes: Retrieved ${data.serialCodes.length} serial codes from ${url}`);
 
 	return data.serialCodes.map(({code, description}) => ({code, description, source: url}));
 };
@@ -82,7 +84,7 @@ interface Game8ScrapedData {
 }
 
 const getGame8SerialCodes = async (url: string) => {
-	logger.info(`getGame8SerialCodes: ${url}`);
+	logInfo(`getGame8SerialCodes: ${url}`);
 
 	assert(url.startsWith('https://game8.jp/'));
 
@@ -166,7 +168,7 @@ const getGame8SerialCodes = async (url: string) => {
 		}
 	}
 
-	logger.info(`getGame8SerialCodes: Retrieved ${serialCodes.length} serial codes from ${url}`);
+	logInfo(`getGame8SerialCodes: Retrieved ${serialCodes.length} serial codes from ${url}`);
 
 	return serialCodes;
 };
@@ -183,7 +185,7 @@ interface AltemaScrapedData {
 }
 
 const getAltemaSerialCodes = async (url: string) => {
-	logger.info(`getAltemaSerialCodes: ${url}`);
+	logInfo(`getAltemaSerialCodes: ${url}`);
 
 	assert(url.startsWith('https://altema.jp/'));
 
@@ -249,7 +251,7 @@ const getAltemaSerialCodes = async (url: string) => {
 		}
 	}
 
-	logger.info(`getAltemaSerialCodes: Retrieved ${serialCodes.length} serial codes from ${url}`);
+	logInfo(`getAltemaSerialCodes: Retrieved ${serialCodes.length} serial codes from ${url}`);
 
 	return serialCodes;
 };
@@ -276,8 +278,8 @@ const getMarkupedSerialCode = (game: string, code: string) => {
 	return code;
 };
 
-export const postGenshinSerialCodesCronJob = pubsub.schedule('every 20 minutes').onRun(async () => {
-	logger.info('postGenshinSerialCodesCronJob: started');
+export const postGenshinSerialCodesCronJob = onSchedule('every 20 minutes', async () => {
+	logInfo('postGenshinSerialCodesCronJob: started');
 
 	const now = Date.now();
 
@@ -357,8 +359,8 @@ export const postGenshinSerialCodesCronJob = pubsub.schedule('every 20 minutes')
 		return {isFirstRun};
 	});
 
-	logger.info(`postGenshinSerialCodesCronJob: Found ${newSerialCodes.length} new serial codes`);
-	logger.info(`postGenshinSerialCodesCronJob: isFirstRun = ${result.isFirstRun}`);
+	logInfo(`postGenshinSerialCodesCronJob: Found ${newSerialCodes.length} new serial codes`);
+	logInfo(`postGenshinSerialCodesCronJob: isFirstRun = ${result.isFirstRun}`);
 
 	if (!result.isFirstRun && newSerialCodes.length > 0) {
 		const serialCodesByGame = groupBy(newSerialCodes, 'game');

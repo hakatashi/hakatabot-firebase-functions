@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import {https} from 'firebase-functions';
+import {onRequest} from 'firebase-functions/v2/https';
 import {google} from 'googleapis';
 import {GoogleTokens, FitbitTokens, AnimeWatchRecords} from './firestore.js';
 import {client as fitbitClient} from './fitbit.js';
@@ -11,7 +11,7 @@ export * from './api/index.js';
 
 const oauth2 = google.oauth2('v2');
 
-export const authenticateGoogleApi = https.onRequest((request, response) => {
+export const authenticateGoogleApi = onRequest((request, response) => {
 	const url = oauth2Client.generateAuthUrl({
 		access_type: 'offline',
 		scope: [
@@ -25,7 +25,7 @@ export const authenticateGoogleApi = https.onRequest((request, response) => {
 	response.redirect(url);
 });
 
-export const googleApiOauthCallback = https.onRequest(async (request, response) => {
+export const googleApiOauthCallback = onRequest(async (request, response) => {
 	const code = request.query?.code;
 	if (!code || typeof code !== 'string') {
 		response.sendStatus(400).end();
@@ -46,7 +46,7 @@ export const googleApiOauthCallback = https.onRequest(async (request, response) 
 	response.send('ok');
 });
 
-export const authenticateFitbitApi = https.onRequest((request, response) => {
+export const authenticateFitbitApi = onRequest((request, response) => {
 	let scopes = request.query?.scopes;
 
 	if (scopes === undefined) {
@@ -66,7 +66,7 @@ export const authenticateFitbitApi = https.onRequest((request, response) => {
 	response.redirect(authorizationUri);
 });
 
-export const fitbitApiOauthCallback = https.onRequest(async (request, response) => {
+export const fitbitApiOauthCallback = onRequest(async (request, response) => {
 	const code = request.query?.code;
 	if (!code || typeof code !== 'string') {
 		response.sendStatus(400).end();
@@ -84,7 +84,7 @@ export const fitbitApiOauthCallback = https.onRequest(async (request, response) 
 	response.send('ok');
 });
 
-export const recordAnimeWatchRecord = https.onRequest(async (request, response) => {
+export const recordAnimeWatchRecord = onRequest(async (request, response) => {
 	if (!request.body || typeof request.body !== 'object') {
 		response.sendStatus(400).end();
 		return;
