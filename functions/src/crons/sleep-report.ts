@@ -9,7 +9,7 @@ import get from 'lodash/get.js';
 import {SANDBOX_ID} from '../const.js';
 import {FitbitSleeps} from '../firestore.js';
 import {get as fitbitGet} from '../fitbit.js';
-import {webClient as slack} from '../slack.js';
+import {getClient as getSlackClient} from '../slack.js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -52,6 +52,7 @@ export const sleepGetCronJob = onSchedule('every 5 minutes', async (event) => {
 				cht: 'bhs',
 			})}`);
 
+			const slack = getSlackClient();
 			await slack.chat.postMessage({
 				as_user: true,
 				channel: SANDBOX_ID,

@@ -2,17 +2,17 @@ import qs from 'node:querystring';
 import {Client as ThreadsClient} from '@threadsjs/threads.js';
 import axios from 'axios';
 import {info as logInfo} from 'firebase-functions/logger';
-import {defineString} from 'firebase-functions/params';
+import {defineSecret} from 'firebase-functions/params';
 
-const MASTODON_HOSTNAME = defineString('MASTODON_HOSTNAME');
-const MASTODON_ACCESS_TOKEN = defineString('MASTODON_ACCESS_TOKEN');
-const BLUESKY_USERNAME = defineString('BLUESKY_USERNAME');
-const BLUESKY_PASSWORD = defineString('BLUESKY_PASSWORD');
-const THREADS_USERNAME = defineString('THREADS_USERNAME');
-const THREADS_PASSWORD = defineString('THREADS_PASSWORD');
-const THREADS_POST_URL = defineString('THREADS_POST_URL');
-const THREADS_USER_ID = defineString('THREADS_USER_ID');
-const THREADS_USER_AGENT = defineString('THREADS_USER_AGENT');
+const MASTODON_HOSTNAME = defineSecret('MASTODON_HOSTNAME');
+const MASTODON_ACCESS_TOKEN = defineSecret('MASTODON_ACCESS_TOKEN');
+const BLUESKY_USERNAME = defineSecret('BLUESKY_USERNAME');
+const BLUESKY_PASSWORD = defineSecret('BLUESKY_PASSWORD');
+const THREADS_USERNAME = defineSecret('THREADS_USERNAME');
+const THREADS_PASSWORD = defineSecret('THREADS_PASSWORD');
+const THREADS_POST_URL = defineSecret('THREADS_POST_URL');
+const THREADS_USER_ID = defineSecret('THREADS_USER_ID');
+const THREADS_USER_AGENT = defineSecret('THREADS_USER_AGENT');
 
 const imageFormatToMimeType = (format: string) => {
 	switch (format) {

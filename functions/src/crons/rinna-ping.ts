@@ -1,12 +1,12 @@
 import {PubSub, Message} from '@google-cloud/pubsub';
 import axios from 'axios';
 import {info as logInfo, error as logError} from 'firebase-functions/logger';
-import {defineString} from 'firebase-functions/params';
+import {defineSecret} from 'firebase-functions/params';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 
-const STATUSPAGE_PAGE_ID = defineString('STATUSPAGE_PAGE_ID');
-const STATUSPAGE_COMPONENT_ID = defineString('STATUSPAGE_COMPONENT_ID');
-const STATUSPAGE_TOKEN = defineString('STATUSPAGE_TOKEN');
+const STATUSPAGE_PAGE_ID = defineSecret('STATUSPAGE_PAGE_ID');
+const STATUSPAGE_COMPONENT_ID = defineSecret('STATUSPAGE_COMPONENT_ID');
+const STATUSPAGE_TOKEN = defineSecret('STATUSPAGE_TOKEN');
 
 const pubsubClient = new PubSub();
 

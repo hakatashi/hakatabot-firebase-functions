@@ -2,15 +2,15 @@ import assert from 'node:assert';
 import {KnownBlock} from '@slack/web-api';
 import type {CollectionReference, DocumentData} from 'firebase-admin/firestore';
 import {info as logInfo} from 'firebase-functions/logger';
-import {defineString} from 'firebase-functions/params';
+import {defineSecret} from 'firebase-functions/params';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 import chunk from 'lodash/chunk.js';
 import groupBy from 'lodash/groupBy.js';
 import scrapeIt from 'scrape-it';
 import {States, db} from '../firestore.js';
-import {webClient as slack} from '../slack.js';
+import {getClient as getSlackClient} from '../slack.js';
 
-const SLACK_CHANNELS_GENSHIN = defineString('SLACK_CHANNELS_GENSHIN');
+const SLACK_CHANNELS_GENSHIN = defineSecret('SLACK_CHANNELS_GENSHIN');
 
 const normalizeHtml = (html: string | null) => (
 	(html ?? '').replaceAll(/<(?:br|hr)>/g, '\n')
@@ -402,6 +402,7 @@ export const postGenshinSerialCodesCronJob = onSchedule('every 20 minutes', asyn
 			])).flat(),
 		];
 
+		const slack = getSlackClient();
 		for (const blocksChunk of chunk(blocks, 50)) {
 			await slack.chat.postMessage({
 				channel: SLACK_CHANNELS_GENSHIN.value(),

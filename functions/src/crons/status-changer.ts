@@ -2,15 +2,15 @@ import unicodeNames from '@unicode/unicode-14.0.0/Names/index.js';
 import download from 'download';
 import emojiData from 'emoji-data';
 import {info as logInfo} from 'firebase-functions/logger';
-import {defineList, defineString} from 'firebase-functions/params';
+import {defineSecret} from 'firebase-functions/params';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 import inRange from 'lodash/inRange.js';
 import sample from 'lodash/sample.js';
-import {webClient as slack} from '../slack.js';
+import {getClient as getSlackClient} from '../slack.js';
 import {getWaka} from './lib/waka.js';
 
-const URLS_TWEETS_JSON = defineString('URLS_TWEETS_JSON');
-const SLACK_TOKENS = defineList('SLACK_TOKENS');
+const URLS_TWEETS_JSON = defineSecret('URLS_TWEETS_JSON');
+const SLACK_TOKENS = defineSecret('SLACK_TOKENS');
 
 const derivedNames = [
 	{start: 0x3400, end: 0x4DB5},
@@ -54,7 +54,8 @@ export const updateSlackStatusesCronJob = onSchedule('every 10 minutes', async (
 	const statusText = sample(tweets).replace(/\n/g, '　');
 
 	const emojis = emojiData.all();
-	const slackTokens = SLACK_TOKENS.value().map((token) => token.split(':'));
+	const slackTokens = SLACK_TOKENS.value().split(',').map((token) => token.split(':'));
+	const slack = getSlackClient();
 
 	for (const [, token] of slackTokens) {
 		const {team} = await slack.team.info({token});

@@ -6,7 +6,7 @@ import {google} from 'googleapis';
 import {IT_QUIZ_GOOGLE_SHEET_ID, IT_QUIZ_ID} from '../const.js';
 import {ItQuizProgressStats, State} from '../firestore.js';
 import {getGoogleAuth} from '../google.js';
-import {webClient as slack} from '../slack.js';
+import {getClient as getSlackClient} from '../slack.js';
 
 const weekdayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -132,6 +132,8 @@ export const itQuizProgressCronJob = onSchedule(
 
 		const imageChartsUrl = await getItQuizStatsImageUrl(timestamp);
 
+		const slack = getSlackClient();
+
 		const slackText = `【ITクイズの現在の進捗】\n完了: ＊${done}問＊ / アイデア: ＊${ideas}問＊`;
 		const slackMessage = await slack.chat.postMessage({
 			channel: IT_QUIZ_ID,
@@ -199,6 +201,8 @@ export const itQuizMilestoneProgressCronJob = onSchedule(
 		}, {merge: true});
 
 		const imageChartsUrl = await getItQuizStatsImageUrl(timestamp);
+
+		const slack = getSlackClient();
 
 		const slackText = `【ITクイズの現在の進捗 (${milestoneCompleted}問突破🎉)】\n完了: ＊${done}問＊ / アイデア: ＊${ideas}問＊`;
 		await slack.chat.postMessage({

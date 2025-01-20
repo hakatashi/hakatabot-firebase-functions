@@ -1,9 +1,9 @@
 import {PubSub} from '@google-cloud/pubsub';
 import {info as logInfo, error as logError} from 'firebase-functions/logger';
-import {defineString} from 'firebase-functions/params';
+import {defineSecret} from 'firebase-functions/params';
 import {onRequest} from 'firebase-functions/v2/https';
 
-const API_TOKEN = defineString('API_TOKEN');
+const API_TOKEN = defineSecret('API_TOKEN');
 
 export const googleFormLlmBenchmarkSubmission = onRequest(async (request, response) => {
 	logInfo('googleFormLlmBenchmarkSubmission started');

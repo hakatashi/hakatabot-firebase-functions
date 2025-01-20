@@ -4,7 +4,7 @@ import {WebClient} from '@slack/web-api';
 import type {WebAPICallResult, MessageAttachment, KnownBlock} from '@slack/web-api';
 import {stripIndents} from 'common-tags';
 import {info as logInfo} from 'firebase-functions/logger';
-import {defineString} from 'firebase-functions/params';
+import {defineSecret} from 'firebase-functions/params';
 import {onRequest} from 'firebase-functions/v2/https';
 import range from 'lodash/range.js';
 import shuffle from 'lodash/shuffle.js';
@@ -67,431 +67,449 @@ export interface GetMessagesResult extends WebAPICallResult {
 	messages: Message[],
 }
 
-const SLACK_TOKEN = defineString('SLACK_TOKEN');
-const SLACK_SIGNING_SECRET = defineString('SLACK_SIGNING_SECRET');
+const SLACK_TOKEN = defineSecret('SLACK_TOKEN');
+const SLACK_SIGNING_SECRET = defineSecret('SLACK_SIGNING_SECRET');
 
-const slack = new WebClient(SLACK_TOKEN.value());
-const eventAdapter = createEventAdapter(SLACK_SIGNING_SECRET.value(), {waitForResponse: true});
-
-const letterpackEmojis = [
-	...range(19).map((i) => `letterpack-${i}`),
-	...range(10).map((i) => `letterpack-light-${i}`),
-];
-
-// Letterpack bomb
-const letterpackBomb = async (event: ReactionAddedEvent) => {
-	if (!(event.user === HAKATASHI_ID && event.reaction === 'love_letter')) {
-		return;
+let webClient: WebClient | null = null;
+export const getClient = () => {
+	if (webClient !== null) {
+		return webClient;
 	}
 
-	await slack.reactions.remove({
-		channel: event.item.channel,
-		timestamp: event.item.ts,
-		name: event.reaction,
-	});
+	webClient = new WebClient(SLACK_TOKEN.value());
 
-	await Promise.all(shuffle(letterpackEmojis).map((emoji) => (
-		slack.reactions.add({
-			channel: event.item.channel,
-			timestamp: event.item.ts,
-			name: emoji,
-		})
-	)));
+	return webClient;
 };
 
-eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
-	if (event.item.type === 'message') {
-		await letterpackBomb(event);
-	}
-});
-
-// Wakaran-penalty
-eventAdapter.on('message', async (message: Message) => {
-	if (
-		message.subtype === 'bot_message' &&
-		message.bot_id === TSG_SLACKBOT_ID &&
-		message.username === '通りすがりに context free bot の解説をしてくれるおじさん' &&
-		message.text.endsWith('わからん') &&
-		message?.icons?.emoji === ':man_dancing_2:'
-	) {
-		await pubsubClient
-			.topic('hakatabot')
-			.publishMessage({
-				data: Buffer.from(JSON.stringify({
-					type: 'rinna-meaning',
-					word: message.text.split(':')[0],
-					ts: message.ts,
-				})),
-			});
-	}
-});
-
-// No-Events canceller
-eventAdapter.on('message', async (message: Message) => {
-	if (
-		message.subtype === 'bot_message' &&
-		message.channel === RANDOM_ID &&
-		message.username === 'TSG' &&
-		message.text === 'There are no events today'
-	) {
-		await slack.chat.delete({
-			channel: message.channel,
-			ts: message.ts,
-		});
-	}
-});
-
-const rinnaSignalBlockList = [
-	'わどう',
-	'和同',
-	'ソートなぞなぞ',
-	'ポッキーゲーム',
-	'チンイツクイズ',
-	'すし',
-	'配牌',
-];
-
-const isRinnaSignalBlockList = (text: string) => {
-	if (rinnaSignalBlockList.includes(text)) {
-		return true;
+let eventAdapter: ReturnType<typeof createEventAdapter> | null = null;
+const getEventAdapter = () => {
+	if (eventAdapter !== null) {
+		return eventAdapter;
 	}
 
-	if (text.endsWith('ロボット')) {
-		return true;
-	}
+	eventAdapter = createEventAdapter(SLACK_SIGNING_SECRET.value(), {waitForResponse: true});
+	const slack = getClient();
 
-	if (text.endsWith('ロボットバトル')) {
-		return true;
-	}
+	const letterpackEmojis = [
+		...range(19).map((i) => `letterpack-${i}`),
+		...range(10).map((i) => `letterpack-light-${i}`),
+	];
 
-	if (text.endsWith('スライドパズル')) {
-		return true;
-	}
-
-	if (text.endsWith('当てクイズ')) {
-		return true;
-	}
-
-	if (text.endsWith('占い')) {
-		return true;
-	}
-
-	if (text.endsWith('将棋')) {
-		return true;
-	}
-
-	if (text.startsWith('ハイパーロボット')) {
-		return true;
-	}
-
-	if (text.startsWith('座標')) {
-		return true;
-	}
-
-	return false;
-};
-
-const matchRinnaSignalText = (text: string) => {
-	if (text.match(/(?:今言うな|皿洗うか|皿洗うの|三脚たたも)/)) {
-		return true;
-	}
-	if (text.match(/^(?:りんな|うな|うか|うの|たたも)、/)) {
-		return true;
-	}
-	if (text.match(/@(?:りんな|うな|うか|うの|たたも)/)) {
-		return true;
-	}
-	return false;
-};
-
-// Rinna signal
-eventAdapter.on('message', async (message: Message) => {
-	if (
-		message.channel !== SANDBOX_ID ||
-		typeof message.thread_ts === 'string' ||
-		(message.text ?? '').includes('CENSORED') ||
-		message.hidden
-	) {
-		return;
-	}
-
-	await db.runTransaction(async (transaction) => {
-		const state = await transaction.get(States.doc('slack-rinna-signal'));
-		const recentBotMessages = (state.get('recentBotMessages') as Message[]) ?? [];
-		const recentHumanMessages = (state.get('recentHumanMessages') as Message[]) ?? [];
-		const lastSignal = (state.get('lastSignal') as number) ?? 0;
-		const optoutUsers = (state.get('optoutUsers') as string[]) ?? [];
-
-		if (
-			message.subtype !== 'bot_message' &&
-			typeof message.bot_id !== 'string' &&
-			message.user !== 'USLACKBOT' &&
-			message.user !== TSGBOT_ID
-		) {
-			if (message.text === '@りんな optout') {
-				optoutUsers.push(message.user);
-				transaction.set(state.ref, {
-					optoutUsers: Array.from(new Set(optoutUsers)),
-				}, {merge: true});
-
-				await slack.chat.postMessage({
-					channel: message.channel,
-					text: `<@${message.user}>をオプトアウトしました`,
-				});
-				return;
-			}
-
-			if (message.text === '@りんな optin') {
-				transaction.set(state.ref, {
-					optoutUsers: optoutUsers.filter((user) => user !== message.user),
-				}, {merge: true});
-
-				await slack.chat.postMessage({
-					channel: message.channel,
-					username: '今言うな',
-					icon_url: 'https://hakata-public.s3.ap-northeast-1.amazonaws.com/slackbot/una_icon.png',
-					text: `にゃにゃにゃ! <@${message.user}>をオプトインしたにゃ!`,
-				});
-				return;
-			}
-		}
-
-		// optout
-		if (
-			typeof message.user === 'string' &&
-			optoutUsers.includes(message.user)
-		) {
+	// Letterpack bomb
+	const letterpackBomb = async (event: ReactionAddedEvent) => {
+		if (!(event.user === HAKATASHI_ID && event.reaction === 'love_letter')) {
 			return;
 		}
 
-		const ts = parseFloat(message.ts);
-		const threshold = ts - 15 * 60;
+		await slack.reactions.remove({
+			channel: event.item.channel,
+			timestamp: event.item.ts,
+			name: event.reaction,
+		});
 
-		let isTrueHumanMessage = false;
-		if (
-			message.bot_id === TSG_SLACKBOT_ID &&
-			(
-				message.username === 'りんな' ||
-				message.username === '今言うな' ||
-				message.username === '皿洗うか' ||
-				message.username === '皿洗うの' ||
-				message.username === '三脚たたも'
-			)
-		) {
-			recentHumanMessages.push(message);
-		} else if (
-			message.subtype === 'bot_message' ||
-			typeof message.bot_id === 'string' ||
-			message.user === 'USLACKBOT' ||
-			message.user === TSGBOT_ID ||
-			isRinnaSignalBlockList(message.text ?? '')
-		) {
-			recentBotMessages.push(message);
-		} else {
-			recentHumanMessages.push(message);
-			isTrueHumanMessage = true;
+		await Promise.all(shuffle(letterpackEmojis).map((emoji) => (
+			slack.reactions.add({
+				channel: event.item.channel,
+				timestamp: event.item.ts,
+				name: emoji,
+			})
+		)));
+	};
+
+	eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
+		if (event.item.type === 'message') {
+			await letterpackBomb(event);
 		}
+	});
 
-		const newBotMessages = recentBotMessages.filter((m) => parseFloat(m.ts) > threshold);
-		const newHumanMessages = recentHumanMessages.filter((m) => parseFloat(m.ts) > threshold);
-
+	// Wakaran-penalty
+	eventAdapter.on('message', async (message: Message) => {
 		if (
-			(
-				isTrueHumanMessage &&
-				matchRinnaSignalText(message.text ?? '')
-			) ||
-			(
-				newHumanMessages.length >= 5 &&
-				newBotMessages.length <= newHumanMessages.length / 2 &&
-				new Set(newHumanMessages.map(({user}) => user)).size >= 3 &&
-				ts >= lastSignal + 60 * 60 &&
-				Math.random() < 0.3
-			)
+			message.subtype === 'bot_message' &&
+			message.bot_id === TSG_SLACKBOT_ID &&
+			message.username === '通りすがりに context free bot の解説をしてくれるおじさん' &&
+			message.text.endsWith('わからん') &&
+			message?.icons?.emoji === ':man_dancing_2:'
 		) {
-			logInfo(`rinna-signal: Signal triggered on ${ts} (lastSignal = ${lastSignal})`);
-
 			await pubsubClient
 				.topic('hakatabot')
 				.publishMessage({
 					data: Buffer.from(JSON.stringify({
-						type: 'rinna-signal',
-						botMessages: newBotMessages,
-						humanMessages: newHumanMessages,
-						lastSignal,
+						type: 'rinna-meaning',
+						word: message.text.split(':')[0],
+						ts: message.ts,
 					})),
 				});
-
-			transaction.set(state.ref, {
-				lastSignal: ts,
-			}, {merge: true});
 		}
-
-		transaction.set(state.ref, {
-			recentBotMessages: newBotMessages,
-			recentHumanMessages: newHumanMessages,
-		}, {merge: true});
 	});
-});
 
-interface Moderations {
-	google_language_service?: {
-		categories: {
-			confidence: number,
-			name: string,
-		}[],
-	},
-	azure_content_moderator?: {
-		terms?: unknown[],
-	},
-}
-
-// Rinna message information
-eventAdapter.on('message', async (message: Message) => {
-	if (
-		typeof message.thread_ts !== 'string' ||
-		message.text !== 'info' ||
-		message.subtype === 'bot_message' ||
-		typeof message.bot_id === 'string' ||
-		message.user === 'USLACKBOT' ||
-		message.user === TSGBOT_ID ||
-		message.hidden
-	) {
-		return;
-	}
-
-	const queryResult = await db.collection('rinna-responses')
-		.where('message.ts', '==', message.thread_ts)
-		.get();
-
-	const threadQueryResult = await db.collection('rinna-responses')
-		.where('message.message.thread_ts', '==', message.thread_ts)
-		.orderBy('message.ts', 'asc')
-		.get();
-
-	const resultDocs = [...queryResult.docs, ...threadQueryResult.docs];
-
-	if (resultDocs.length === 0) {
-		return;
-	}
-
-	const doc = resultDocs[0];
-
-	const inputDialog = doc.get('inputDialog') as string ?? '';
-	const outputSpeech = doc.get('outputSpeech') as string ?? '';
-	const output = doc.get('output') as string ?? '';
-	const character = doc.get('character') as string ?? '';
-	const moderations = resultDocs.map((resultDoc) => resultDoc.get('moderations') as Moderations ?? {});
-
-	const tailText = output.split('」').slice(1).join('」');
-	let text = stripIndents`
-		Input:
-		\`\`\`
-		${inputDialog.trim()}
-		\`\`\`
-		Result:
-		\`\`\`
-		${character}「${outputSpeech.trim()}」
-		\`\`\`
-		Continuation Text:
-		\`\`\`
-		${tailText.trim()}
-		\`\`\`
-	`;
-
-	for (const moderation of moderations) {
-		if (moderation.google_language_service) {
-			const isAdult = moderation.google_language_service.categories
-				.some((category) => category.name === '/Adult');
-			text += '\n';
-			text += [
-				`Google Moderation Result: ${isAdult ? 'NG' : 'OK'}`,
-				'```',
-				JSON.stringify(moderation.google_language_service.categories, null, '  '),
-				'```',
-			].join('\n');
+	// No-Events canceller
+	eventAdapter.on('message', async (message: Message) => {
+		if (
+			message.subtype === 'bot_message' &&
+			message.channel === RANDOM_ID &&
+			message.username === 'TSG' &&
+			message.text === 'There are no events today'
+		) {
+			await slack.chat.delete({
+				channel: message.channel,
+				ts: message.ts,
+			});
 		}
-
-		if (moderation.azure_content_moderator) {
-			const terms = moderation.azure_content_moderator.terms ?? [];
-			const isOffensive = terms.length > 0;
-			text += '\n';
-			text += [
-				`Azure Moderation Result: ${isOffensive ? 'NG' : 'OK'}`,
-				'```',
-				JSON.stringify(terms, null, '  '),
-				'```',
-			].join('\n');
-		}
-	}
-
-	await slack.chat.postMessage({
-		channel: message.channel,
-		thread_ts: message.thread_ts,
-		username: 'GPT-2 Messaging Engine Service Rinna',
-		text,
 	});
-});
 
-// FitBit optout
-eventAdapter.on('message', async (message: Message) => {
-	if (
-		!message.text?.startsWith('fitbit ') ||
-		message.subtype === 'bot_message' ||
-		typeof message.bot_id === 'string' ||
-		message.user === 'USLACKBOT' ||
-		message.user === TSGBOT_ID ||
-		message.hidden
-	) {
-		return;
-	}
+	const rinnaSignalBlockList = [
+		'わどう',
+		'和同',
+		'ソートなぞなぞ',
+		'ポッキーゲーム',
+		'チンイツクイズ',
+		'すし',
+		'配牌',
+	];
 
-	const tokens = message.text.split(' ');
-
-	const operation = tokens[1];
-	const user = tokens.slice(2).join(' ');
-
-	const state = new State('sleep-battle-cron-job');
-	let optoutUsers = await state.get('optoutUsers', [] as string[]);
-	const slackUsers = await state.get('slackUsers', Object.create(null) as Record<string, string>);
-	if (operation === 'optin') {
-		optoutUsers = optoutUsers.filter((u) => u !== user);
-	} else if (operation === 'optout') {
-		optoutUsers.push(user);
-	} else if (operation === 'id') {
-		slackUsers[message.user] = user;
-	}
-
-	await state.set({optoutUsers, slackUsers});
-
-	const getNotificationText = () => {
-		if (operation === 'optin') {
-			return `${user} をオプトインしたよ`;
+	const isRinnaSignalBlockList = (text: string) => {
+		if (rinnaSignalBlockList.includes(text)) {
+			return true;
 		}
-		if (operation === 'optout') {
-			return `${user} をオプトアウトしたよ`;
+
+		if (text.endsWith('ロボット')) {
+			return true;
 		}
-		if (operation === 'id') {
-			return `<@${message.user}> の FitBit id を ${user} に設定したよ`;
+
+		if (text.endsWith('ロボットバトル')) {
+			return true;
 		}
-		return ':thinking_face:';
+
+		if (text.endsWith('スライドパズル')) {
+			return true;
+		}
+
+		if (text.endsWith('当てクイズ')) {
+			return true;
+		}
+
+		if (text.endsWith('占い')) {
+			return true;
+		}
+
+		if (text.endsWith('将棋')) {
+			return true;
+		}
+
+		if (text.startsWith('ハイパーロボット')) {
+			return true;
+		}
+
+		if (text.startsWith('座標')) {
+			return true;
+		}
+
+		return false;
 	};
 
-	await slack.chat.postMessage({
-		channel: message.channel,
-		as_user: true,
-		text: getNotificationText(),
+	const matchRinnaSignalText = (text: string) => {
+		if (text.match(/(?:今言うな|皿洗うか|皿洗うの|三脚たたも)/)) {
+			return true;
+		}
+		if (text.match(/^(?:りんな|うな|うか|うの|たたも)、/)) {
+			return true;
+		}
+		if (text.match(/@(?:りんな|うな|うか|うの|たたも)/)) {
+			return true;
+		}
+		return false;
+	};
+
+	// Rinna signal
+	eventAdapter.on('message', async (message: Message) => {
+		if (
+			message.channel !== SANDBOX_ID ||
+			typeof message.thread_ts === 'string' ||
+			(message.text ?? '').includes('CENSORED') ||
+			message.hidden
+		) {
+			return;
+		}
+
+		await db.runTransaction(async (transaction) => {
+			const state = await transaction.get(States.doc('slack-rinna-signal'));
+			const recentBotMessages = (state.get('recentBotMessages') as Message[]) ?? [];
+			const recentHumanMessages = (state.get('recentHumanMessages') as Message[]) ?? [];
+			const lastSignal = (state.get('lastSignal') as number) ?? 0;
+			const optoutUsers = (state.get('optoutUsers') as string[]) ?? [];
+
+			if (
+				message.subtype !== 'bot_message' &&
+				typeof message.bot_id !== 'string' &&
+				message.user !== 'USLACKBOT' &&
+				message.user !== TSGBOT_ID
+			) {
+				if (message.text === '@りんな optout') {
+					optoutUsers.push(message.user);
+					transaction.set(state.ref, {
+						optoutUsers: Array.from(new Set(optoutUsers)),
+					}, {merge: true});
+
+					await slack.chat.postMessage({
+						channel: message.channel,
+						text: `<@${message.user}>をオプトアウトしました`,
+					});
+					return;
+				}
+
+				if (message.text === '@りんな optin') {
+					transaction.set(state.ref, {
+						optoutUsers: optoutUsers.filter((user) => user !== message.user),
+					}, {merge: true});
+
+					await slack.chat.postMessage({
+						channel: message.channel,
+						username: '今言うな',
+						icon_url: 'https://hakata-public.s3.ap-northeast-1.amazonaws.com/slackbot/una_icon.png',
+						text: `にゃにゃにゃ! <@${message.user}>をオプトインしたにゃ!`,
+					});
+					return;
+				}
+			}
+
+			// optout
+			if (
+				typeof message.user === 'string' &&
+				optoutUsers.includes(message.user)
+			) {
+				return;
+			}
+
+			const ts = parseFloat(message.ts);
+			const threshold = ts - 15 * 60;
+
+			let isTrueHumanMessage = false;
+			if (
+				message.bot_id === TSG_SLACKBOT_ID &&
+				(
+					message.username === 'りんな' ||
+					message.username === '今言うな' ||
+					message.username === '皿洗うか' ||
+					message.username === '皿洗うの' ||
+					message.username === '三脚たたも'
+				)
+			) {
+				recentHumanMessages.push(message);
+			} else if (
+				message.subtype === 'bot_message' ||
+				typeof message.bot_id === 'string' ||
+				message.user === 'USLACKBOT' ||
+				message.user === TSGBOT_ID ||
+				isRinnaSignalBlockList(message.text ?? '')
+			) {
+				recentBotMessages.push(message);
+			} else {
+				recentHumanMessages.push(message);
+				isTrueHumanMessage = true;
+			}
+
+			const newBotMessages = recentBotMessages.filter((m) => parseFloat(m.ts) > threshold);
+			const newHumanMessages = recentHumanMessages.filter((m) => parseFloat(m.ts) > threshold);
+
+			if (
+				(
+					isTrueHumanMessage &&
+					matchRinnaSignalText(message.text ?? '')
+				) ||
+				(
+					newHumanMessages.length >= 5 &&
+					newBotMessages.length <= newHumanMessages.length / 2 &&
+					new Set(newHumanMessages.map(({user}) => user)).size >= 3 &&
+					ts >= lastSignal + 60 * 60 &&
+					Math.random() < 0.3
+				)
+			) {
+				logInfo(`rinna-signal: Signal triggered on ${ts} (lastSignal = ${lastSignal})`);
+
+				await pubsubClient
+					.topic('hakatabot')
+					.publishMessage({
+						data: Buffer.from(JSON.stringify({
+							type: 'rinna-signal',
+							botMessages: newBotMessages,
+							humanMessages: newHumanMessages,
+							lastSignal,
+						})),
+					});
+
+				transaction.set(state.ref, {
+					lastSignal: ts,
+				}, {merge: true});
+			}
+
+			transaction.set(state.ref, {
+				recentBotMessages: newBotMessages,
+				recentHumanMessages: newHumanMessages,
+			}, {merge: true});
+		});
 	});
-});
 
-// What's wrong?
-eventAdapter.constructor.prototype.emit = async function (eventName: string, event: any, respond: () => void) {
-	for (const listener of this.listeners(eventName) as ((ev: any) => Promise<any>)[]) {
-		await listener.call(this, event);
+	interface Moderations {
+		google_language_service?: {
+			categories: {
+				confidence: number,
+				name: string,
+			}[],
+		},
+		azure_content_moderator?: {
+			terms?: unknown[],
+		},
 	}
-	respond();
-};
 
-const requestListener = eventAdapter.requestListener();
+	// Rinna message information
+	eventAdapter.on('message', async (message: Message) => {
+		if (
+			typeof message.thread_ts !== 'string' ||
+			message.text !== 'info' ||
+			message.subtype === 'bot_message' ||
+			typeof message.bot_id === 'string' ||
+			message.user === 'USLACKBOT' ||
+			message.user === TSGBOT_ID ||
+			message.hidden
+		) {
+			return;
+		}
+
+		const queryResult = await db.collection('rinna-responses')
+			.where('message.ts', '==', message.thread_ts)
+			.get();
+
+		const threadQueryResult = await db.collection('rinna-responses')
+			.where('message.message.thread_ts', '==', message.thread_ts)
+			.orderBy('message.ts', 'asc')
+			.get();
+
+		const resultDocs = [...queryResult.docs, ...threadQueryResult.docs];
+
+		if (resultDocs.length === 0) {
+			return;
+		}
+
+		const doc = resultDocs[0];
+
+		const inputDialog = doc.get('inputDialog') as string ?? '';
+		const outputSpeech = doc.get('outputSpeech') as string ?? '';
+		const output = doc.get('output') as string ?? '';
+		const character = doc.get('character') as string ?? '';
+		const moderations = resultDocs.map((resultDoc) => resultDoc.get('moderations') as Moderations ?? {});
+
+		const tailText = output.split('」').slice(1).join('」');
+		let text = stripIndents`
+			Input:
+			\`\`\`
+			${inputDialog.trim()}
+			\`\`\`
+			Result:
+			\`\`\`
+			${character}「${outputSpeech.trim()}」
+			\`\`\`
+			Continuation Text:
+			\`\`\`
+			${tailText.trim()}
+			\`\`\`
+		`;
+
+		for (const moderation of moderations) {
+			if (moderation.google_language_service) {
+				const isAdult = moderation.google_language_service.categories
+					.some((category) => category.name === '/Adult');
+				text += '\n';
+				text += [
+					`Google Moderation Result: ${isAdult ? 'NG' : 'OK'}`,
+					'```',
+					JSON.stringify(moderation.google_language_service.categories, null, '  '),
+					'```',
+				].join('\n');
+			}
+
+			if (moderation.azure_content_moderator) {
+				const terms = moderation.azure_content_moderator.terms ?? [];
+				const isOffensive = terms.length > 0;
+				text += '\n';
+				text += [
+					`Azure Moderation Result: ${isOffensive ? 'NG' : 'OK'}`,
+					'```',
+					JSON.stringify(terms, null, '  '),
+					'```',
+				].join('\n');
+			}
+		}
+
+		await slack.chat.postMessage({
+			channel: message.channel,
+			thread_ts: message.thread_ts,
+			username: 'GPT-2 Messaging Engine Service Rinna',
+			text,
+		});
+	});
+
+	// FitBit optout
+	eventAdapter.on('message', async (message: Message) => {
+		if (
+			!message.text?.startsWith('fitbit ') ||
+			message.subtype === 'bot_message' ||
+			typeof message.bot_id === 'string' ||
+			message.user === 'USLACKBOT' ||
+			message.user === TSGBOT_ID ||
+			message.hidden
+		) {
+			return;
+		}
+
+		const tokens = message.text.split(' ');
+
+		const operation = tokens[1];
+		const user = tokens.slice(2).join(' ');
+
+		const state = new State('sleep-battle-cron-job');
+		let optoutUsers = await state.get('optoutUsers', [] as string[]);
+		const slackUsers = await state.get('slackUsers', Object.create(null) as Record<string, string>);
+		if (operation === 'optin') {
+			optoutUsers = optoutUsers.filter((u) => u !== user);
+		} else if (operation === 'optout') {
+			optoutUsers.push(user);
+		} else if (operation === 'id') {
+			slackUsers[message.user] = user;
+		}
+
+		await state.set({optoutUsers, slackUsers});
+
+		const getNotificationText = () => {
+			if (operation === 'optin') {
+				return `${user} をオプトインしたよ`;
+			}
+			if (operation === 'optout') {
+				return `${user} をオプトアウトしたよ`;
+			}
+			if (operation === 'id') {
+				return `<@${message.user}> の FitBit id を ${user} に設定したよ`;
+			}
+			return ':thinking_face:';
+		};
+
+		await slack.chat.postMessage({
+			channel: message.channel,
+			as_user: true,
+			text: getNotificationText(),
+		});
+	});
+
+	// What's wrong?
+	eventAdapter.constructor.prototype.emit = async function (eventName: string, event: any, respond: () => void) {
+		for (const listener of this.listeners(eventName) as ((ev: any) => Promise<any>)[]) {
+			await listener.call(this, event);
+		}
+		respond();
+	};
+
+	return eventAdapter;
+};
 
 export const slackEvent = onRequest((request, response) => {
 	if (request.headers['x-slack-retry-num']) {
@@ -500,7 +518,7 @@ export const slackEvent = onRequest((request, response) => {
 		return;
 	}
 
+	const slackEventAdapter = getEventAdapter();
+	const requestListener = slackEventAdapter.requestListener();
 	requestListener(request, response);
 });
-
-export {slack as webClient};

@@ -1,13 +1,13 @@
 import {Octokit} from '@octokit/rest';
 import axios from 'axios';
 import {info as logInfo, error as logError} from 'firebase-functions/logger';
-import {defineString} from 'firebase-functions/params';
+import {defineSecret} from 'firebase-functions/params';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 import type {ScheduledEvent} from 'firebase-functions/v2/scheduler';
 import {postBluesky, postMastodon, postThreads} from './lib/social.js';
 
-const GITHUB_TOKEN = defineString('GITHUB_TOKEN');
-const SCRAPBOX_SID = defineString('SCRAPBOX_SID');
+const GITHUB_TOKEN = defineSecret('GITHUB_TOKEN');
+const SCRAPBOX_SID = defineSecret('SCRAPBOX_SID');
 
 interface ScrapboxUser {
 	id: string,
@@ -49,9 +49,18 @@ interface Entry {
 	cite: string,
 }
 
-const github = new Octokit({
-	auth: GITHUB_TOKEN.value(),
-});
+let github: Octokit | null = null;
+const getClient = () => {
+	if (github !== null) {
+		return github;
+	}
+
+	github = new Octokit({
+		auth: GITHUB_TOKEN.value(),
+	});
+
+	return github;
+};
 
 const getCite = (cite: string, word: string) => {
 	if (cite === 'goo') {
@@ -137,13 +146,14 @@ const updateWordBlogFunction = async (context: ScheduledEvent) => {
 
 	const owner = 'hakatashi';
 	const repo = 'word.hakatashi.com';
+	const githubClient = getClient();
 
 	logInfo('Getting default branch...');
-	const {data: repoInfo} = await github.repos.get({owner, repo});
+	const {data: repoInfo} = await githubClient.repos.get({owner, repo});
 	const defaultBranch = repoInfo.default_branch;
 
 	logInfo('Getting files under _posts directory...');
-	const {data: files} = await github.repos.getContent({
+	const {data: files} = await githubClient.repos.getContent({
 		owner,
 		repo,
 		path: 'source/_posts',
@@ -183,14 +193,14 @@ const updateWordBlogFunction = async (context: ScheduledEvent) => {
 	logInfo(`File to post: ${JSON.stringify(lines)}`);
 
 	logInfo('Getting commit hash...');
-	const {data: ref} = await github.git.getRef({owner, repo, ref: `heads/${defaultBranch}`});
+	const {data: ref} = await githubClient.git.getRef({owner, repo, ref: `heads/${defaultBranch}`});
 	const commitHash = ref.object.sha;
 
 	logInfo('Getting tree hash...');
-	const {data: commit} = await github.repos.getCommit({owner, repo, ref: commitHash});
+	const {data: commit} = await githubClient.repos.getCommit({owner, repo, ref: commitHash});
 
 	logInfo('Creating new tree...');
-	const {data: tree} = await github.git.createTree({
+	const {data: tree} = await githubClient.git.createTree({
 		owner,
 		repo,
 		base_tree: commit.commit.tree.sha,
@@ -205,7 +215,7 @@ const updateWordBlogFunction = async (context: ScheduledEvent) => {
 	});
 
 	logInfo('Creating new commit...');
-	const {data: newCommit} = await github.git.createCommit({
+	const {data: newCommit} = await githubClient.git.createCommit({
 		owner,
 		repo,
 		message: `BOT: Add source/_posts/${entry.word}.md`,
@@ -219,7 +229,7 @@ const updateWordBlogFunction = async (context: ScheduledEvent) => {
 	});
 
 	logInfo('Updating ref...');
-	const {data: newRef} = await github.git.updateRef({
+	const {data: newRef} = await githubClient.git.updateRef({
 		owner,
 		repo,
 		sha: newCommit.sha,
