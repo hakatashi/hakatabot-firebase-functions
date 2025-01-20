@@ -1,8 +1,9 @@
 import {Octokit} from '@octokit/rest';
 import axios from 'axios';
-import * as functions from 'firebase-functions';
 import {config as getConfig} from 'firebase-functions';
 import {info as logInfo, error as logError} from 'firebase-functions/logger';
+import {onSchedule} from 'firebase-functions/v2/scheduler';
+import type {ScheduledEvent} from 'firebase-functions/v2/scheduler';
 import {postBluesky, postMastodon, postThreads} from './lib/social.js';
 
 const config = getConfig();
@@ -67,13 +68,13 @@ const getCite = (cite: string, word: string) => {
 	return '';
 };
 
-const updateWordBlogFunction = async (context: functions.EventContext) => {
+const updateWordBlogFunction = async (context: ScheduledEvent) => {
 	const date = new Intl.DateTimeFormat('eo', {
 		timeZone: 'Asia/Tokyo',
 		year: 'numeric',
 		month: '2-digit',
 		day: '2-digit',
-	}).format(new Date(context.timestamp));
+	}).format(new Date(context.scheduleTime));
 
 	logInfo('Retrieving Scrapbox data...');
 
@@ -210,7 +211,7 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 		author: {
 			name: 'Koki Takahashi',
 			email: 'hakatasiloving@gmail.com',
-			date: new Date(context.timestamp).toISOString(),
+			date: new Date(context.scheduleTime).toISOString(),
 		},
 		parents: [ref.object.sha],
 		tree: tree.sha,
@@ -264,8 +265,11 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 	logInfo('done.');
 };
 
-export const updateWordBlog = functions
-	.runWith({timeoutSeconds: 120})
-	.pubsub.schedule('0 10 * * *')
-	.timeZone('Asia/Tokyo')
-	.onRun(updateWordBlogFunction);
+export const updateWordBlog = onSchedule(
+	{
+		timeoutSeconds: 120,
+		schedule: '0 10 * * *',
+		timeZone: 'Asia/Tokyo',
+	},
+	updateWordBlogFunction,
+);
