@@ -1,14 +1,16 @@
 import {stripIndent} from 'common-tags';
 import dayjs from 'dayjs';
-import {logger, pubsub, firestore} from 'firebase-functions';
+import {info as logInfo} from 'firebase-functions/logger';
+import {onDocumentWritten} from 'firebase-functions/v2/firestore';
+import {onSchedule} from 'firebase-functions/v2/scheduler';
 import last from 'lodash/last.js';
 import {FITNESS_ID} from '../const.js';
 import {AnimeWatchRecords, FitbitActivities} from '../firestore.js';
 import {get} from '../fitbit.js';
 import {webClient as slack} from '../slack.js';
 
-export const exerciseGetCronJob = pubsub.schedule('every 5 minutes').onRun(async (event) => {
-	logger.info('Getting fitbit activities...');
+export const exerciseGetCronJob = onSchedule('every 5 minutes', async (event) => {
+	logInfo('Getting fitbit activities...');
 	const res = await get('/1/user/-/activities/list.json', {
 		afterDate: '1970-01-01',
 		sort: 'desc',
@@ -16,19 +18,19 @@ export const exerciseGetCronJob = pubsub.schedule('every 5 minutes').onRun(async
 		offset: 0,
 	});
 
-	logger.info(`Retrieved ${res.activities.length} activities`);
-	const now = new Date(event.timestamp);
+	logInfo(`Retrieved ${res.activities.length} activities`);
+	const now = new Date(event.scheduleTime);
 	const threshold = new Date(now.getTime() - 60 * 60 * 1000);
 	for (const activity of res.activities) {
 		if (new Date(activity.lastModified) < threshold) {
-			logger.info(`Skipping activity ${activity.logId} because it's too old`);
+			logInfo(`Skipping activity ${activity.logId} because it's too old`);
 			continue;
 		}
 		await FitbitActivities.doc(activity.logId.toString()).set(activity, {merge: true});
 	}
 });
 
-export const exercisePostCronJob = firestore.document('fitbit-activities/{logId}').onWrite(async () => {
+export const exercisePostCronJob = onDocumentWritten('fitbit-activities/{logId}', async () => {
 	const now = Date.now();
 	const thresholdTime = now - 5 * 60 * 1000;
 
