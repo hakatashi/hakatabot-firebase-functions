@@ -3,8 +3,7 @@
 import dayjs from 'dayjs';
 import timezone from 'dayjs/plugin/timezone.js';
 import utc from 'dayjs/plugin/utc.js';
-import {info as logInfo} from 'firebase-functions/logger';
-import {onSchedule} from 'firebase-functions/v2/scheduler';
+import {logger, pubsub} from 'firebase-functions';
 import get from 'lodash/get.js';
 import {SANDBOX_ID} from '../const.js';
 import {FitbitSleeps} from '../firestore.js';
@@ -14,8 +13,8 @@ import {webClient as slack} from '../slack.js';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-export const sleepGetCronJob = onSchedule('every 5 minutes', async (event) => {
-	logInfo('Getting fitbit activities...');
+export const sleepGetCronJob = pubsub.schedule('every 5 minutes').onRun(async (event) => {
+	logger.info('Getting fitbit activities...');
 
 	const res = await fitbitGet('/1.2/user/-/sleep/list.json', {
 		beforeDate: '2100-01-01',
@@ -24,13 +23,13 @@ export const sleepGetCronJob = onSchedule('every 5 minutes', async (event) => {
 		offset: 0,
 	});
 
-	const now = new Date(event.scheduleTime);
+	const now = new Date(event.timestamp);
 	const threshold = new Date(now.getTime() - 6 * 60 * 60 * 1000);
 
-	logInfo(`Retrieved ${res.sleep.length} sleeps`);
+	logger.info(`Retrieved ${res.sleep.length} sleeps`);
 	for (const sleep of res.sleep) {
 		if (new Date(sleep.endTime) < threshold) {
-			logInfo(`Skipping sleep ${sleep.logId} because it's too old`);
+			logger.info(`Skipping sleep ${sleep.logId} because it's too old`);
 			continue;
 		}
 

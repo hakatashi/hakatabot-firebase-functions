@@ -1,8 +1,6 @@
 import {PubSub, Message} from '@google-cloud/pubsub';
 import axios from 'axios';
-import {config as getConfig} from 'firebase-functions';
-import {info as logInfo, error as logError} from 'firebase-functions/logger';
-import {onSchedule} from 'firebase-functions/v2/scheduler';
+import {logger, pubsub, config as getConfig} from 'firebase-functions';
 
 const config = getConfig();
 
@@ -13,17 +11,17 @@ interface PongMessage {
 	mode: string,
 }
 
-export const rinnaPingCronJob = onSchedule('every 5 minutes', async () => {
+export const rinnaPingCronJob = pubsub.schedule('every 5 minutes').onRun(async () => {
 	const now = Date.now();
 
 	const topicId = `rinna-ping-${now}`;
 	const subscriptionId = `rinna-ping-subscription-${now}`;
 
-	logInfo(`Creating one-time subscription (topicId = ${topicId}, subscriptionId = ${subscriptionId})`);
+	logger.info(`Creating one-time subscription (topicId = ${topicId}, subscriptionId = ${subscriptionId})`);
 
 	const [topic] = await pubsubClient.createTopic(topicId);
 
-	logInfo(`Created topic ${topicId}`);
+	logger.info(`Created topic ${topicId}`);
 
 	const [subscription] = await pubsubClient
 		.topic(topicId)
@@ -31,7 +29,7 @@ export const rinnaPingCronJob = onSchedule('every 5 minutes', async () => {
 			enableExactlyOnceDelivery: true,
 		});
 
-	logInfo(`Created subscription ${subscriptionId}`);
+	logger.info(`Created subscription ${subscriptionId}`);
 
 	// eslint-disable-next-line no-undef
 	let timeoutId: NodeJS.Timeout | null = null;
@@ -39,8 +37,8 @@ export const rinnaPingCronJob = onSchedule('every 5 minutes', async () => {
 	try {
 		const pongPromise = new Promise<PongMessage>((resolve) => {
 			subscription.once('message', (message: Message) => {
-				logInfo(`Received message ${message.id}`);
-				logInfo(message);
+				logger.info(`Received message ${message.id}`);
+				logger.info(message);
 
 				message.ack();
 
@@ -51,12 +49,12 @@ export const rinnaPingCronJob = onSchedule('every 5 minutes', async () => {
 
 		const timeoutPromise = new Promise<never>((_resolve, reject) => {
 			timeoutId = setTimeout(() => {
-				logError('Timed out');
+				logger.error('Timed out');
 				reject(new Error('Timeout'));
 			}, 1000 * 30);
 		});
 
-		logInfo('Publishing ping message to topic hakatabot');
+		logger.info('Publishing ping message to topic hakatabot');
 
 		pubsubClient
 			.topic('hakatabot')
@@ -67,12 +65,12 @@ export const rinnaPingCronJob = onSchedule('every 5 minutes', async () => {
 				})),
 			});
 
-		logInfo('Published ping message to topic hakatabot');
+		logger.info('Published ping message to topic hakatabot');
 
 		const pongMessage = await Promise.race([pongPromise, timeoutPromise]);
 		const status = pongMessage.mode === 'GPU' ? 'operational' : 'degraded_performance';
 
-		logInfo(`Posting status (mode = ${pongMessage.mode}, status = ${status})`);
+		logger.info(`Posting status (mode = ${pongMessage.mode}, status = ${status})`);
 		await axios.patch(
 			`https://api.statuspage.io/v1/pages/${config.statuspage.page_id}/components/${config.statuspage.component_id}`,
 			{
@@ -85,9 +83,9 @@ export const rinnaPingCronJob = onSchedule('every 5 minutes', async () => {
 			},
 		);
 	} catch (error) {
-		logError(error);
+		logger.error(error);
 
-		logInfo('Posting status (status = major_outage)');
+		logger.info('Posting status (status = major_outage)');
 		await axios.patch(
 			`https://api.statuspage.io/v1/pages/${config.statuspage.page_id}/components/${config.statuspage.component_id}`,
 			{
@@ -107,12 +105,12 @@ export const rinnaPingCronJob = onSchedule('every 5 minutes', async () => {
 		}
 		subscription.removeAllListeners('message');
 
-		logInfo(`Deleting subscription ${subscriptionId}`);
+		logger.info(`Deleting subscription ${subscriptionId}`);
 		await subscription.delete();
-		logInfo(`Deleted subscription ${subscriptionId}`);
+		logger.info(`Deleted subscription ${subscriptionId}`);
 
-		logInfo(`Deleting topic ${topicId}`);
+		logger.info(`Deleting topic ${topicId}`);
 		await topic.delete();
-		logInfo(`Deleted topic ${topicId}`);
+		logger.info(`Deleted topic ${topicId}`);
 	}
 });

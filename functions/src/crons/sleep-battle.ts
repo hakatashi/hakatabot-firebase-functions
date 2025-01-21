@@ -1,8 +1,7 @@
 
 
 import dayjs from 'dayjs';
-import {info as logInfo} from 'firebase-functions/logger';
-import {onSchedule} from 'firebase-functions/v2/scheduler';
+import {logger, pubsub} from 'firebase-functions';
 import {SANDBOX_ID} from '../const.js';
 import {FitbitTokens, State} from '../firestore.js';
 import {get} from '../fitbit.js';
@@ -35,12 +34,10 @@ const getScoreEmoji = (score: number) => {
 	return '';
 };
 
-export const sleepBattleCronJob = onSchedule(
-	{
-		schedule: '0 12 * * *',
-		timeZone: 'Asia/Tokyo',
-	},
-	async () => {
+export const sleepBattleCronJob = pubsub
+	.schedule('0 12 * * *')
+	.timeZone('Asia/Tokyo')
+	.onRun(async () => {
 		const state = new State('sleep-battle-cron-job');
 		const optoutUsers = await state.get('optoutUsers', [] as string[]);
 		const slackUsers = await state.get(
@@ -54,7 +51,7 @@ export const sleepBattleCronJob = onSchedule(
 		const sleepScores = [] as Rank[];
 
 		for (const token of fitbitTokens.docs) {
-			logInfo(`Getting fitbit profile of ${token.id}...`);
+			logger.info(`Getting fitbit profile of ${token.id}...`);
 			const profileResponse = await get('/1/user/-/profile.json', {}, token.id);
 			const username = profileResponse?.user?.displayName ?? 'No Name';
 
@@ -62,7 +59,7 @@ export const sleepBattleCronJob = onSchedule(
 				continue;
 			}
 
-			logInfo(`Getting fitbit activities of ${username}...`);
+			logger.info(`Getting fitbit activities of ${username}...`);
 			const sleepsResponse = await get('/1.2/user/-/sleep/list.json', {
 				beforeDate: '2100-01-01',
 				sort: 'desc',
@@ -70,7 +67,7 @@ export const sleepBattleCronJob = onSchedule(
 				offset: 0,
 			}, token.id);
 
-			logInfo(`Retrieved ${sleepsResponse.sleep.length} sleeps by ${username}`);
+			logger.info(`Retrieved ${sleepsResponse.sleep.length} sleeps by ${username}`);
 			const today = dayjs().tz('Asia/Tokyo');
 
 			const sleep = sleepsResponse.sleep.reverse().find((s: any) => {
@@ -130,7 +127,7 @@ export const sleepBattleCronJob = onSchedule(
 			return b.score! - a.score!;
 		});
 
-		logInfo(sleepScores);
+		logger.info(sleepScores);
 
 		let rank = 1;
 		for (const sleep of sleepScores) {
@@ -210,5 +207,4 @@ export const sleepBattleCronJob = onSchedule(
 				},
 			],
 		});
-	},
-);
+	});

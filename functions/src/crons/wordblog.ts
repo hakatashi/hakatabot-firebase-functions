@@ -1,8 +1,7 @@
 import {Octokit} from '@octokit/rest';
 import axios from 'axios';
 import * as functions from 'firebase-functions';
-import {config as getConfig} from 'firebase-functions';
-import {info as logInfo, error as logError} from 'firebase-functions/logger';
+import {logger, config as getConfig} from 'firebase-functions';
 import {postBluesky, postMastodon, postThreads} from './lib/social.js';
 
 const config = getConfig();
@@ -75,13 +74,13 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 		day: '2-digit',
 	}).format(new Date(context.timestamp));
 
-	logInfo('Retrieving Scrapbox data...');
+	logger.info('Retrieving Scrapbox data...');
 
 	const scrapboxUrl = `https://scrapbox.io/api/pages/hakatashi/${encodeURIComponent('日本語')}`;
 	const {data} = await axios.get<ScrapboxPage>(scrapboxUrl, {
 		headers: {Cookie: `connect.sid=${config.scrapbox.sid}`},
 	});
-	logInfo(`Retrieved ${data.lines.length} lines from Scrapbox`);
+	logger.info(`Retrieved ${data.lines.length} lines from Scrapbox`);
 
 	const entries: Entry[] = [];
 
@@ -131,16 +130,16 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 
 	entries.reverse();
 
-	logInfo(`Retrieved ${entries.length} entries from Scrapbox`);
+	logger.info(`Retrieved ${entries.length} entries from Scrapbox`);
 
 	const owner = 'hakatashi';
 	const repo = 'word.hakatashi.com';
 
-	logInfo('Getting default branch...');
+	logger.info('Getting default branch...');
 	const {data: repoInfo} = await github.repos.get({owner, repo});
 	const defaultBranch = repoInfo.default_branch;
 
-	logInfo('Getting files under _posts directory...');
+	logger.info('Getting files under _posts directory...');
 	const {data: files} = await github.repos.getContent({
 		owner,
 		repo,
@@ -156,15 +155,15 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 		}
 	}
 
-	logInfo(`Retrieved ${postedEntries.size} posted entries`);
+	logger.info(`Retrieved ${postedEntries.size} posted entries`);
 
 	const entry = entries.find(({word}) => !postedEntries.has(word));
 	if (entry === undefined) {
-		logInfo('Couldn\'t find entry to post. Exiting...');
+		logger.info('Couldn\'t find entry to post. Exiting...');
 		return;
 	}
 
-	logInfo(`Posting entry ${JSON.stringify(entry, null, '  ')}`);
+	logger.info(`Posting entry ${JSON.stringify(entry, null, '  ')}`);
 
 	const lines = [
 		'---',
@@ -178,16 +177,16 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 		getCite(entry.cite, entry.word),
 	];
 
-	logInfo(`File to post: ${JSON.stringify(lines)}`);
+	logger.info(`File to post: ${JSON.stringify(lines)}`);
 
-	logInfo('Getting commit hash...');
+	logger.info('Getting commit hash...');
 	const {data: ref} = await github.git.getRef({owner, repo, ref: `heads/${defaultBranch}`});
 	const commitHash = ref.object.sha;
 
-	logInfo('Getting tree hash...');
+	logger.info('Getting tree hash...');
 	const {data: commit} = await github.repos.getCommit({owner, repo, ref: commitHash});
 
-	logInfo('Creating new tree...');
+	logger.info('Creating new tree...');
 	const {data: tree} = await github.git.createTree({
 		owner,
 		repo,
@@ -202,7 +201,7 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 		],
 	});
 
-	logInfo('Creating new commit...');
+	logger.info('Creating new commit...');
 	const {data: newCommit} = await github.git.createCommit({
 		owner,
 		repo,
@@ -216,7 +215,7 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 		tree: tree.sha,
 	});
 
-	logInfo('Updating ref...');
+	logger.info('Updating ref...');
 	const {data: newRef} = await github.git.updateRef({
 		owner,
 		repo,
@@ -225,11 +224,11 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 		ref: `heads/${defaultBranch}`,
 	});
 
-	logInfo(`done. (commit = ${newRef.object.sha})`);
+	logger.info(`done. (commit = ${newRef.object.sha})`);
 
-	logInfo(`done. (commit = ${newRef.object.sha})`);
+	logger.info(`done. (commit = ${newRef.object.sha})`);
 
-	logInfo('Waiting for 60 seconds...');
+	logger.info('Waiting for 60 seconds...');
 
 	await new Promise((resolve) => {
 		setTimeout(resolve, 60 * 1000);
@@ -237,31 +236,31 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 
 	const url = `https://word.hakatashi.com/${date.replace(/-/g, '')}/`;
 
-	logInfo('Posting to Mastodon...');
+	logger.info('Posting to Mastodon...');
 	try {
 		const res = await postMastodon(`hakatashiの一日一語: 「${entry.word}」 ${url}`);
-		logInfo(`done. (id_str = ${res.id})`);
+		logger.info(`done. (id_str = ${res.id})`);
 	} catch (error) {
-		logError(`Failed to post to Mastodon: ${error}`);
+		logger.error(`Failed to post to Mastodon: ${error}`);
 	}
 
-	logInfo('Posting to Bluesky...');
+	logger.info('Posting to Bluesky...');
 	try {
 		const res = await postBluesky(`hakatashiの一日一語: 「${entry.word}」 ${url}`);
-		logInfo(`done. (id = ${res.id})`);
+		logger.info(`done. (id = ${res.id})`);
 	} catch (error) {
-		logError(`Failed to post to Bluesky: ${error}`);
+		logger.error(`Failed to post to Bluesky: ${error}`);
 	}
 
-	logInfo('Posting to Threads...');
+	logger.info('Posting to Threads...');
 	try {
 		const res = await postThreads(`hakatashiの一日一語: 「${entry.word}」 ${url}`);
-		logInfo(`done. (id = ${res.id})`);
+		logger.info(`done. (id = ${res.id})`);
 	} catch (error) {
-		logError(`Failed to post to Threads: ${error}`);
+		logger.error(`Failed to post to Threads: ${error}`);
 	}
 
-	logInfo('done.');
+	logger.info('done.');
 };
 
 export const updateWordBlog = functions
