@@ -1,4 +1,5 @@
-import {config as getConfig, logger} from 'firebase-functions';
+import {config as getConfig} from 'firebase-functions';
+import {info as logInfo} from 'firebase-functions/logger';
 import {google} from 'googleapis';
 import {HAKATASHI_EMAIL} from './const.js';
 import {GoogleTokens} from './firestore.js';
@@ -14,7 +15,7 @@ export const oauth2Client = new google.auth.OAuth2(
 );
 
 oauth2Client.on('tokens', async (tokens) => {
-	logger.info('Google token was updated');
+	logInfo('Google token was updated');
 	if (tokens.access_token && tokens.id_token) {
 		const tokenInfo = await oauth2.tokeninfo({
 			access_token: tokens.access_token,

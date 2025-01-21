@@ -1,7 +1,8 @@
 import qs from 'node:querystring';
 import {Client as ThreadsClient} from '@threadsjs/threads.js';
 import axios from 'axios';
-import {logger, config as getConfig} from 'firebase-functions';
+import {config as getConfig} from 'firebase-functions';
+import {info as logInfo} from 'firebase-functions/logger';
 
 const config = getConfig();
 
@@ -51,7 +52,7 @@ export const postMastodon = async (text: string, images: Image[] = []) => {
 			},
 		});
 
-		logger.info(`Uploaded image: ${res.data.id}`);
+		logInfo(`Uploaded image: ${res.data.id}`);
 		mediaIds.push(res.data.id);
 	}
 
@@ -113,7 +114,7 @@ export const postBluesky = async (text: string, images: Image[] = []) => {
 		throw new Error('Failed to create Bluesky session');
 	}
 
-	logger.info(`Bluesky session: ${session}`);
+	logInfo(`Bluesky session: ${session}`);
 
 	const blobs: any[] = [];
 
@@ -125,7 +126,7 @@ export const postBluesky = async (text: string, images: Image[] = []) => {
 			},
 		});
 
-		logger.info(`Uploaded image: ${JSON.stringify(uploadRes.data.blob)}`);
+		logInfo(`Uploaded image: ${JSON.stringify(uploadRes.data.blob)}`);
 
 		blobs.push(uploadRes.data.blob);
 	}

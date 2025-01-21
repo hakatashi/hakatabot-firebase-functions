@@ -2,15 +2,17 @@ import path from 'node:path';
 import qs from 'node:querystring';
 import type {File} from '@slack/web-api/dist/types/response/FilesUploadResponse.js';
 import axios from 'axios';
-import {https, logger, config as getConfig} from 'firebase-functions';
+import {config as getConfig} from 'firebase-functions';
+import {info as logInfo, error as logError} from 'firebase-functions/logger';
+import {onRequest} from 'firebase-functions/v2/https';
 import {SANDBOX_ID} from '../const.js';
 import {postBluesky, postMastodon, postThreads} from '../crons/lib/social.js';
 import {webClient as slack} from '../slack.js';
 
 const config = getConfig();
 
-export const updateSocialPost = https.onRequest(async (request, response) => {
-	logger.info('updateSocialPost started');
+export const updateSocialPost = onRequest(async (request, response) => {
+	logInfo('updateSocialPost started');
 
 	if (request.method !== 'POST') {
 		response.status(405);
@@ -21,21 +23,21 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 	const {text, linkToTweet, token, destinations: rawDestinations = ''} = qs.parse(request.rawBody.toString());
 
 	if (token !== config.api.token) {
-		logger.error('Invalid token');
+		logError('Invalid token');
 		response.status(403);
 		response.send('Forbidden');
 		return;
 	}
 
 	if (typeof text !== 'string' || text.length === 0) {
-		logger.error('Invalid text');
+		logError('Invalid text');
 		response.status(400);
 		response.send('Bad Request');
 		return;
 	}
 
 	if (typeof linkToTweet !== 'string' || linkToTweet.length === 0) {
-		logger.error('Invalid linkToTweet');
+		logError('Invalid linkToTweet');
 		response.status(400);
 		response.send('Bad Request');
 		return;
@@ -48,7 +50,7 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 	}
 
 	if (typeof rawDestinations !== 'string') {
-		logger.error('Invalid destinations');
+		logError('Invalid destinations');
 		response.status(400);
 		response.send('Bad Request');
 		return;
@@ -60,9 +62,9 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 
 	const destinations = normalizedDestinations.size === 0 ? ['mastodon', 'bluesky', 'threads', 'slack'] : [...normalizedDestinations];
 
-	logger.info(`text: ${text}`);
-	logger.info(`link to tweet: ${linkToTweet}`);
-	logger.info(`destinations: ${destinations.join(', ')}`);
+	logInfo(`text: ${text}`);
+	logInfo(`link to tweet: ${linkToTweet}`);
+	logInfo(`destinations: ${destinations.join(', ')}`);
 
 	const shortlinks = text.matchAll(/https:\/\/t\.co\/[a-zA-Z0-9]+/g);
 
@@ -70,7 +72,7 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 	let hasImage = false;
 
 	for (const [shortlink] of shortlinks) {
-		logger.info(`Resolving shortlink: ${shortlink}`);
+		logInfo(`Resolving shortlink: ${shortlink}`);
 
 		const res = await axios.get(shortlink, {
 			maxRedirects: 0,
@@ -79,10 +81,10 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 
 		const location = res.headers.location as string | undefined;
 
-		logger.info(`Resolved shortlink to ${location}`);
+		logInfo(`Resolved shortlink to ${location}`);
 
 		if (location === undefined) {
-			logger.error(`Failed to resolve shortlink: ${shortlink}`);
+			logError(`Failed to resolve shortlink: ${shortlink}`);
 			continue;
 		}
 
@@ -94,7 +96,7 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 		}
 	}
 
-	logger.info(`Normalized text: ${normalizedText}`);
+	logInfo(`Normalized text: ${normalizedText}`);
 
 	const images: {format: string, data: Buffer}[] = [];
 
@@ -102,21 +104,21 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 		const twitterUrl = new URL(linkToTweet.trim());
 		twitterUrl.hostname = 'api.vxtwitter.com';
 
-		logger.info(`Fetching ${twitterUrl.toString()}`);
+		logInfo(`Fetching ${twitterUrl.toString()}`);
 
 		const res = await axios.get(twitterUrl.toString(), {
 			responseType: 'json',
 		});
 
 		if (res.status !== 200 || res.headers['content-type'] !== 'application/json') {
-			logger.error(`Failed to fetch tweet: status ${res.status}, content-type ${res.headers['content-type']}`);
+			logError(`Failed to fetch tweet: status ${res.status}, content-type ${res.headers['content-type']}`);
 			response.status(500);
 			response.send('Internal Server Error');
 			return;
 		}
 
 		for (const mediaUrl of res.data.mediaURLs) {
-			logger.info(`Found image: ${mediaUrl}`);
+			logInfo(`Found image: ${mediaUrl}`);
 
 			const imageUrl = `${mediaUrl}?name=orig`;
 			const imageRes = await axios.get<Buffer>(imageUrl, {
@@ -125,7 +127,7 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 			});
 
 			if (imageRes.status !== 200) {
-				logger.error(`Failed to fetch image: ${imageUrl}`);
+				logError(`Failed to fetch image: ${imageUrl}`);
 				continue;
 			}
 
@@ -134,7 +136,7 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 		}
 
 		if (images.length === 0) {
-			logger.error('No images found');
+			logError('No images found');
 		}
 	}
 
@@ -142,9 +144,9 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 	if (destinations.includes('mastodon')) {
 		try {
 			const data = await postMastodon(normalizedText, images);
-			logger.info(`Posted status: ${data.id}`);
+			logInfo(`Posted status: ${data.id}`);
 		} catch (error) {
-			logger.error(`Failed to post Mastodon status: ${error}`);
+			logError(`Failed to post Mastodon status: ${error}`);
 		}
 	}
 
@@ -152,9 +154,9 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 	if (destinations.includes('bluesky')) {
 		try {
 			const data = await postBluesky(normalizedText, images);
-			logger.info(`Posted bluesky status: ${data.uri}`);
+			logInfo(`Posted bluesky status: ${data.uri}`);
 		} catch (error) {
-			logger.error(`Failed to post Bluesky status: ${error}`);
+			logError(`Failed to post Bluesky status: ${error}`);
 		}
 	}
 
@@ -162,9 +164,9 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 	if (destinations.includes('threads') && normalizedText.length > 0) {
 		try {
 			const data = await postThreads(normalizedText);
-			logger.info(`Posted Threads status: ${data.media.code}`);
+			logInfo(`Posted Threads status: ${data.media.code}`);
 		} catch (error) {
-			logger.error(`Failed to post Threads status: ${error}`);
+			logError(`Failed to post Threads status: ${error}`);
 		}
 	}
 
@@ -182,7 +184,7 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 
 			// @ts-expect-error: slack.files.uploadV2 is not well typed
 			files.push(...(res.files?.[0]?.files ?? []));
-			logger.info(`Uploaded images: ${files.map((file) => file.id).join(', ')}`);
+			logInfo(`Uploaded images: ${files.map((file) => file.id).join(', ')}`);
 		}
 
 		const postRes = await slack.chat.postMessage({
@@ -191,7 +193,7 @@ export const updateSocialPost = https.onRequest(async (request, response) => {
 			text: `${normalizedText} ${files.map((file) => file.permalink).map((link) => `<${link}| >`).join('')}`,
 		});
 
-		logger.info(`Posted Slack status: ${postRes.ts}`);
+		logInfo(`Posted Slack status: ${postRes.ts}`);
 	}
 
 	response.send('OK');

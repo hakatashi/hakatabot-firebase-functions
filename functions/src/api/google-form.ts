@@ -1,11 +1,13 @@
 import {PubSub} from '@google-cloud/pubsub';
-import {https, logger, config as getConfig} from 'firebase-functions';
+import {config as getConfig} from 'firebase-functions';
+import {info as logInfo, error as logError} from 'firebase-functions/logger';
+import {onRequest} from 'firebase-functions/v2/https';
 
 const config = getConfig();
 
-export const googleFormLlmBenchmarkSubmission = https.onRequest(async (request, response) => {
-	logger.info('googleFormLlmBenchmarkSubmission started');
-	logger.info(`method: ${request.method}`);
+export const googleFormLlmBenchmarkSubmission = onRequest(async (request, response) => {
+	logInfo('googleFormLlmBenchmarkSubmission started');
+	logInfo(`method: ${request.method}`);
 
 	if (request.method !== 'POST') {
 		response.status(405);
@@ -16,7 +18,7 @@ export const googleFormLlmBenchmarkSubmission = https.onRequest(async (request, 
 	const data = request.body;
 
 	if (data.token !== config.api.token) {
-		logger.error('Invalid token');
+		logError('Invalid token');
 		response.status(403);
 		response.send('Forbidden');
 		return;
@@ -31,7 +33,7 @@ export const googleFormLlmBenchmarkSubmission = https.onRequest(async (request, 
 		})),
 	});
 
-	logger.info('Published LLM benchmark submission message to topic hakatabot');
+	logInfo('Published LLM benchmark submission message to topic hakatabot');
 
 	response.status(200).send('OK');
 });
