@@ -1,8 +1,5 @@
 import axios from 'axios';
-import {config as getConfig} from 'firebase-functions';
-import {info as logInfo, error as logError} from 'firebase-functions/logger';
-import {onDocumentUpdated} from 'firebase-functions/v2/firestore';
-import {onSchedule} from 'firebase-functions/v2/scheduler';
+import {pubsub, config as getConfig, firestore, logger} from 'firebase-functions';
 import {SteamFriends, db} from '../firestore.js';
 import {webClient as slack} from '../slack.js';
 
@@ -32,8 +29,8 @@ interface GetPlayerSummariesResponse {
 	};
 }
 
-export const updateSteamFriendsCronJob = onSchedule('every 5 minutes', async () => {
-	logInfo('updateSteamFriendsCronJob started');
+export const updateSteamFriendsCronJob = pubsub.schedule('every 5 minutes').onRun(async () => {
+	logger.info('updateSteamFriendsCronJob started');
 
 	const {data: friends} = await axios<GetFriendListResponse>('https://api.steampowered.com/ISteamUser/GetFriendList/v1', {
 		params: {
@@ -46,7 +43,7 @@ export const updateSteamFriendsCronJob = onSchedule('every 5 minutes', async () 
 
 	const steamIds = friends.friendslist.friends.map((friend) => friend.steamid);
 
-	logInfo(`Fetched ${steamIds.length} friends`);
+	logger.info(`Fetched ${steamIds.length} friends`);
 
 	const {data: players} = await axios<GetPlayerSummariesResponse>('https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2', {
 		params: {
@@ -56,7 +53,7 @@ export const updateSteamFriendsCronJob = onSchedule('every 5 minutes', async () 
 		},
 	});
 
-	logInfo(`Fetched ${players.response.players.length} players`);
+	logger.info(`Fetched ${players.response.players.length} players`);
 
 	const batch = db.batch();
 
@@ -67,7 +64,7 @@ export const updateSteamFriendsCronJob = onSchedule('every 5 minutes', async () 
 
 	await batch.commit();
 
-	logInfo('updateSteamFriendsCronJob finished');
+	logger.info('updateSteamFriendsCronJob finished');
 });
 
 interface GameStat {
@@ -81,17 +78,17 @@ interface PlayerStat {
 	value: number,
 }
 
-export const onSteamFriendStatusChanged = onDocumentUpdated('steam-friends/{steamId}', async (change) => {
-	logInfo('onSteamFriendStatusChanged started');
+export const onSteamFriendStatusChanged = firestore.document('steam-friends/{steamId}').onUpdate(async (change) => {
+	logger.info('onSteamFriendStatusChanged started');
 
-	const before = change.data?.before.data();
-	const after = change.data?.after.data();
+	const before = change.before.data();
+	const after = change.after.data();
 
-	logInfo(`before.gameid: ${before?.gameid}`);
-	logInfo(`after.gameid: ${after?.gameid}`);
+	logger.info(`before.gameid: ${before?.gameid}`);
+	logger.info(`after.gameid: ${after?.gameid}`);
 
 	if (before?.gameid !== after?.gameid && after?.gameid) {
-		logInfo(`Game changed: ${before?.gameid} -> ${after?.gameid}`);
+		logger.info(`Game changed: ${before?.gameid} -> ${after?.gameid}`);
 
 		let gameName: string | undefined = after?.gameextrainfo;
 		let mergedPlayerStats: (PlayerStat & {displayName: string})[] = [];
@@ -111,7 +108,7 @@ export const onSteamFriendStatusChanged = onDocumentUpdated('steam-friends/{stea
 				gameName = gameSchema?.game?.gameName;
 			}
 
-			logInfo(`Fetched game stats: ${gameStats.length}`);
+			logger.info(`Fetched game stats: ${gameStats.length}`);
 
 			const {data: userStats} = await axios('https://api.steampowered.com/ISteamUserStats/GetUserStatsForGame/v2', {
 				params: {
@@ -124,7 +121,7 @@ export const onSteamFriendStatusChanged = onDocumentUpdated('steam-friends/{stea
 
 			const playerStats: PlayerStat[] = userStats?.playerstats?.stats ?? [];
 
-			logInfo(`Fetched player stats: ${playerStats.length}`);
+			logger.info(`Fetched player stats: ${playerStats.length}`);
 
 			mergedPlayerStats = playerStats.map((stat) => {
 				const gameStat = gameStats.find((gs) => gs.name === stat.name);
@@ -135,7 +132,7 @@ export const onSteamFriendStatusChanged = onDocumentUpdated('steam-friends/{stea
 				};
 			});
 		} catch (error) {
-			logError('Failed to fetch game stats', error);
+			logger.error('Failed to fetch game stats', error);
 		}
 
 		const appUrl = `https://store.steampowered.com/app/${after.gameid}`;
@@ -150,7 +147,7 @@ export const onSteamFriendStatusChanged = onDocumentUpdated('steam-friends/{stea
 			emoji: true,
 		}));
 
-		logInfo(`Posting message: ${message}`);
+		logger.info(`Posting message: ${message}`);
 
 		const postedMessage = await slack.chat.postMessage({
 			// eslint-disable-next-line no-underscore-dangle, private-props/no-use-outside
@@ -169,6 +166,6 @@ export const onSteamFriendStatusChanged = onDocumentUpdated('steam-friends/{stea
 			],
 		});
 
-		logInfo(`Posted message: ${postedMessage.ts}`);
+		logger.info(`Posted message: ${postedMessage.ts}`);
 	}
 });
