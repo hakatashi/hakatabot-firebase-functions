@@ -1,13 +1,12 @@
 import axios from 'axios';
-import {logger, pubsub} from 'firebase-functions';
+import {info as logInfo} from 'firebase-functions/logger';
+import {onSchedule} from 'firebase-functions/v2/scheduler';
 
-export const tsgctfPlatformConsolidateTasksCronJob = pubsub.schedule('every 1 minutes').onRun(async () => {
-	logger.info('tsgctfPlatformConsolidateTasksCronJob started');
+export const tsgctfPlatformConsolidateTasksCronJob = onSchedule('every 1 minutes', async () => {
+	logInfo('tsgctfPlatformConsolidateTasksCronJob started');
 
 	const res = await axios.post('https://tsgctf-platform.vercel.app/api/crons/consolidateTasks');
 
-	logger.info(`tsgctfPlatformConsolidateTasksCronJob finished: ${res.status}`);
-	logger.info(res.data);
-
-	return null;
+	logInfo(`tsgctfPlatformConsolidateTasksCronJob finished: ${res.status}`);
+	logInfo(res.data);
 });

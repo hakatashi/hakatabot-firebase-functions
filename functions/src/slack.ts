@@ -3,7 +3,9 @@ import {createEventAdapter} from '@slack/events-api';
 import {WebClient} from '@slack/web-api';
 import type {WebAPICallResult, MessageAttachment, KnownBlock} from '@slack/web-api';
 import {stripIndents} from 'common-tags';
-import {https, logger, config as getConfig} from 'firebase-functions';
+import {info as logInfo} from 'firebase-functions/logger';
+import {defineString} from 'firebase-functions/params';
+import {onRequest} from 'firebase-functions/v2/https';
 import range from 'lodash/range.js';
 import shuffle from 'lodash/shuffle.js';
 import {HAKATASHI_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID, TSGBOT_ID} from './const.js';
@@ -65,10 +67,11 @@ export interface GetMessagesResult extends WebAPICallResult {
 	messages: Message[],
 }
 
-const config = getConfig();
+const SLACK_TOKEN = defineString('SLACK_TOKEN');
+const SLACK_SIGNING_SECRET = defineString('SLACK_SIGNING_SECRET');
 
-const slack = new WebClient(config.slack.token);
-const eventAdapter = createEventAdapter(config.slack.signing_secret, {waitForResponse: true});
+const slack = new WebClient(SLACK_TOKEN.value());
+const eventAdapter = createEventAdapter(SLACK_SIGNING_SECRET.value(), {waitForResponse: true});
 
 const letterpackEmojis = [
 	...range(19).map((i) => `letterpack-${i}`),
@@ -305,7 +308,7 @@ eventAdapter.on('message', async (message: Message) => {
 				Math.random() < 0.3
 			)
 		) {
-			logger.log(`rinna-signal: Signal triggered on ${ts} (lastSignal = ${lastSignal})`);
+			logInfo(`rinna-signal: Signal triggered on ${ts} (lastSignal = ${lastSignal})`);
 
 			await pubsubClient
 				.topic('hakatabot')
@@ -490,9 +493,9 @@ eventAdapter.constructor.prototype.emit = async function (eventName: string, eve
 
 const requestListener = eventAdapter.requestListener();
 
-export const slackEvent = https.onRequest((request, response) => {
+export const slackEvent = onRequest((request, response) => {
 	if (request.headers['x-slack-retry-num']) {
-		logger.log(`Ignoring Slack retry message: ${request.headers['x-slack-retry-num']}`);
+		logInfo(`Ignoring Slack retry message: ${request.headers['x-slack-retry-num']}`);
 		response.status(202).send('OK');
 		return;
 	}

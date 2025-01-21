@@ -1,10 +1,13 @@
 import {Octokit} from '@octokit/rest';
 import axios from 'axios';
-import * as functions from 'firebase-functions';
-import {logger, config as getConfig} from 'firebase-functions';
+import {info as logInfo, error as logError} from 'firebase-functions/logger';
+import {defineString} from 'firebase-functions/params';
+import {onSchedule} from 'firebase-functions/v2/scheduler';
+import type {ScheduledEvent} from 'firebase-functions/v2/scheduler';
 import {postBluesky, postMastodon, postThreads} from './lib/social.js';
 
-const config = getConfig();
+const GITHUB_TOKEN = defineString('GITHUB_TOKEN');
+const SCRAPBOX_SID = defineString('SCRAPBOX_SID');
 
 interface ScrapboxUser {
 	id: string,
@@ -47,7 +50,7 @@ interface Entry {
 }
 
 const github = new Octokit({
-	auth: config.github.token,
+	auth: GITHUB_TOKEN.value(),
 });
 
 const getCite = (cite: string, word: string) => {
@@ -66,21 +69,21 @@ const getCite = (cite: string, word: string) => {
 	return '';
 };
 
-const updateWordBlogFunction = async (context: functions.EventContext) => {
+const updateWordBlogFunction = async (context: ScheduledEvent) => {
 	const date = new Intl.DateTimeFormat('eo', {
 		timeZone: 'Asia/Tokyo',
 		year: 'numeric',
 		month: '2-digit',
 		day: '2-digit',
-	}).format(new Date(context.timestamp));
+	}).format(new Date(context.scheduleTime));
 
-	logger.info('Retrieving Scrapbox data...');
+	logInfo('Retrieving Scrapbox data...');
 
 	const scrapboxUrl = `https://scrapbox.io/api/pages/hakatashi/${encodeURIComponent('日本語')}`;
 	const {data} = await axios.get<ScrapboxPage>(scrapboxUrl, {
-		headers: {Cookie: `connect.sid=${config.scrapbox.sid}`},
+		headers: {Cookie: `connect.sid=${SCRAPBOX_SID.value()}`},
 	});
-	logger.info(`Retrieved ${data.lines.length} lines from Scrapbox`);
+	logInfo(`Retrieved ${data.lines.length} lines from Scrapbox`);
 
 	const entries: Entry[] = [];
 
@@ -130,16 +133,16 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 
 	entries.reverse();
 
-	logger.info(`Retrieved ${entries.length} entries from Scrapbox`);
+	logInfo(`Retrieved ${entries.length} entries from Scrapbox`);
 
 	const owner = 'hakatashi';
 	const repo = 'word.hakatashi.com';
 
-	logger.info('Getting default branch...');
+	logInfo('Getting default branch...');
 	const {data: repoInfo} = await github.repos.get({owner, repo});
 	const defaultBranch = repoInfo.default_branch;
 
-	logger.info('Getting files under _posts directory...');
+	logInfo('Getting files under _posts directory...');
 	const {data: files} = await github.repos.getContent({
 		owner,
 		repo,
@@ -155,15 +158,15 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 		}
 	}
 
-	logger.info(`Retrieved ${postedEntries.size} posted entries`);
+	logInfo(`Retrieved ${postedEntries.size} posted entries`);
 
 	const entry = entries.find(({word}) => !postedEntries.has(word));
 	if (entry === undefined) {
-		logger.info('Couldn\'t find entry to post. Exiting...');
+		logInfo('Couldn\'t find entry to post. Exiting...');
 		return;
 	}
 
-	logger.info(`Posting entry ${JSON.stringify(entry, null, '  ')}`);
+	logInfo(`Posting entry ${JSON.stringify(entry, null, '  ')}`);
 
 	const lines = [
 		'---',
@@ -177,16 +180,16 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 		getCite(entry.cite, entry.word),
 	];
 
-	logger.info(`File to post: ${JSON.stringify(lines)}`);
+	logInfo(`File to post: ${JSON.stringify(lines)}`);
 
-	logger.info('Getting commit hash...');
+	logInfo('Getting commit hash...');
 	const {data: ref} = await github.git.getRef({owner, repo, ref: `heads/${defaultBranch}`});
 	const commitHash = ref.object.sha;
 
-	logger.info('Getting tree hash...');
+	logInfo('Getting tree hash...');
 	const {data: commit} = await github.repos.getCommit({owner, repo, ref: commitHash});
 
-	logger.info('Creating new tree...');
+	logInfo('Creating new tree...');
 	const {data: tree} = await github.git.createTree({
 		owner,
 		repo,
@@ -201,7 +204,7 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 		],
 	});
 
-	logger.info('Creating new commit...');
+	logInfo('Creating new commit...');
 	const {data: newCommit} = await github.git.createCommit({
 		owner,
 		repo,
@@ -209,13 +212,13 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 		author: {
 			name: 'Koki Takahashi',
 			email: 'hakatasiloving@gmail.com',
-			date: new Date(context.timestamp).toISOString(),
+			date: new Date(context.scheduleTime).toISOString(),
 		},
 		parents: [ref.object.sha],
 		tree: tree.sha,
 	});
 
-	logger.info('Updating ref...');
+	logInfo('Updating ref...');
 	const {data: newRef} = await github.git.updateRef({
 		owner,
 		repo,
@@ -224,11 +227,11 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 		ref: `heads/${defaultBranch}`,
 	});
 
-	logger.info(`done. (commit = ${newRef.object.sha})`);
+	logInfo(`done. (commit = ${newRef.object.sha})`);
 
-	logger.info(`done. (commit = ${newRef.object.sha})`);
+	logInfo(`done. (commit = ${newRef.object.sha})`);
 
-	logger.info('Waiting for 60 seconds...');
+	logInfo('Waiting for 60 seconds...');
 
 	await new Promise((resolve) => {
 		setTimeout(resolve, 60 * 1000);
@@ -236,35 +239,38 @@ const updateWordBlogFunction = async (context: functions.EventContext) => {
 
 	const url = `https://word.hakatashi.com/${date.replace(/-/g, '')}/`;
 
-	logger.info('Posting to Mastodon...');
+	logInfo('Posting to Mastodon...');
 	try {
 		const res = await postMastodon(`hakatashiの一日一語: 「${entry.word}」 ${url}`);
-		logger.info(`done. (id_str = ${res.id})`);
+		logInfo(`done. (id_str = ${res.id})`);
 	} catch (error) {
-		logger.error(`Failed to post to Mastodon: ${error}`);
+		logError(`Failed to post to Mastodon: ${error}`);
 	}
 
-	logger.info('Posting to Bluesky...');
+	logInfo('Posting to Bluesky...');
 	try {
 		const res = await postBluesky(`hakatashiの一日一語: 「${entry.word}」 ${url}`);
-		logger.info(`done. (id = ${res.id})`);
+		logInfo(`done. (id = ${res.id})`);
 	} catch (error) {
-		logger.error(`Failed to post to Bluesky: ${error}`);
+		logError(`Failed to post to Bluesky: ${error}`);
 	}
 
-	logger.info('Posting to Threads...');
+	logInfo('Posting to Threads...');
 	try {
 		const res = await postThreads(`hakatashiの一日一語: 「${entry.word}」 ${url}`);
-		logger.info(`done. (id = ${res.id})`);
+		logInfo(`done. (id = ${res.id})`);
 	} catch (error) {
-		logger.error(`Failed to post to Threads: ${error}`);
+		logError(`Failed to post to Threads: ${error}`);
 	}
 
-	logger.info('done.');
+	logInfo('done.');
 };
 
-export const updateWordBlog = functions
-	.runWith({timeoutSeconds: 120})
-	.pubsub.schedule('0 10 * * *')
-	.timeZone('Asia/Tokyo')
-	.onRun(updateWordBlogFunction);
+export const updateWordBlog = onSchedule(
+	{
+		timeoutSeconds: 120,
+		schedule: '0 10 * * *',
+		timeZone: 'Asia/Tokyo',
+	},
+	updateWordBlogFunction,
+);

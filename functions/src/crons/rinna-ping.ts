@@ -1,8 +1,12 @@
 import {PubSub, Message} from '@google-cloud/pubsub';
 import axios from 'axios';
-import {logger, pubsub, config as getConfig} from 'firebase-functions';
+import {info as logInfo, error as logError} from 'firebase-functions/logger';
+import {defineString} from 'firebase-functions/params';
+import {onSchedule} from 'firebase-functions/v2/scheduler';
 
-const config = getConfig();
+const STATUSPAGE_PAGE_ID = defineString('STATUSPAGE_PAGE_ID');
+const STATUSPAGE_COMPONENT_ID = defineString('STATUSPAGE_COMPONENT_ID');
+const STATUSPAGE_TOKEN = defineString('STATUSPAGE_TOKEN');
 
 const pubsubClient = new PubSub();
 
@@ -11,17 +15,17 @@ interface PongMessage {
 	mode: string,
 }
 
-export const rinnaPingCronJob = pubsub.schedule('every 5 minutes').onRun(async () => {
+export const rinnaPingCronJob = onSchedule('every 5 minutes', async () => {
 	const now = Date.now();
 
 	const topicId = `rinna-ping-${now}`;
 	const subscriptionId = `rinna-ping-subscription-${now}`;
 
-	logger.info(`Creating one-time subscription (topicId = ${topicId}, subscriptionId = ${subscriptionId})`);
+	logInfo(`Creating one-time subscription (topicId = ${topicId}, subscriptionId = ${subscriptionId})`);
 
 	const [topic] = await pubsubClient.createTopic(topicId);
 
-	logger.info(`Created topic ${topicId}`);
+	logInfo(`Created topic ${topicId}`);
 
 	const [subscription] = await pubsubClient
 		.topic(topicId)
@@ -29,7 +33,7 @@ export const rinnaPingCronJob = pubsub.schedule('every 5 minutes').onRun(async (
 			enableExactlyOnceDelivery: true,
 		});
 
-	logger.info(`Created subscription ${subscriptionId}`);
+	logInfo(`Created subscription ${subscriptionId}`);
 
 	// eslint-disable-next-line no-undef
 	let timeoutId: NodeJS.Timeout | null = null;
@@ -37,8 +41,8 @@ export const rinnaPingCronJob = pubsub.schedule('every 5 minutes').onRun(async (
 	try {
 		const pongPromise = new Promise<PongMessage>((resolve) => {
 			subscription.once('message', (message: Message) => {
-				logger.info(`Received message ${message.id}`);
-				logger.info(message);
+				logInfo(`Received message ${message.id}`);
+				logInfo(message);
 
 				message.ack();
 
@@ -49,12 +53,12 @@ export const rinnaPingCronJob = pubsub.schedule('every 5 minutes').onRun(async (
 
 		const timeoutPromise = new Promise<never>((_resolve, reject) => {
 			timeoutId = setTimeout(() => {
-				logger.error('Timed out');
+				logError('Timed out');
 				reject(new Error('Timeout'));
 			}, 1000 * 30);
 		});
 
-		logger.info('Publishing ping message to topic hakatabot');
+		logInfo('Publishing ping message to topic hakatabot');
 
 		pubsubClient
 			.topic('hakatabot')
@@ -65,29 +69,29 @@ export const rinnaPingCronJob = pubsub.schedule('every 5 minutes').onRun(async (
 				})),
 			});
 
-		logger.info('Published ping message to topic hakatabot');
+		logInfo('Published ping message to topic hakatabot');
 
 		const pongMessage = await Promise.race([pongPromise, timeoutPromise]);
 		const status = pongMessage.mode === 'GPU' ? 'operational' : 'degraded_performance';
 
-		logger.info(`Posting status (mode = ${pongMessage.mode}, status = ${status})`);
+		logInfo(`Posting status (mode = ${pongMessage.mode}, status = ${status})`);
 		await axios.patch(
-			`https://api.statuspage.io/v1/pages/${config.statuspage.page_id}/components/${config.statuspage.component_id}`,
+			`https://api.statuspage.io/v1/pages/${STATUSPAGE_PAGE_ID.value()}/components/${STATUSPAGE_COMPONENT_ID.value()}`,
 			{
 				component: {status},
 			},
 			{
 				headers: {
-					Authorization: `OAuth ${config.statuspage.token}`,
+					Authorization: `OAuth ${STATUSPAGE_TOKEN.value()}`,
 				},
 			},
 		);
 	} catch (error) {
-		logger.error(error);
+		logError(error);
 
-		logger.info('Posting status (status = major_outage)');
+		logInfo('Posting status (status = major_outage)');
 		await axios.patch(
-			`https://api.statuspage.io/v1/pages/${config.statuspage.page_id}/components/${config.statuspage.component_id}`,
+			`https://api.statuspage.io/v1/pages/${STATUSPAGE_PAGE_ID.value()}/components/${STATUSPAGE_COMPONENT_ID.value()}`,
 			{
 				component: {
 					status: 'major_outage',
@@ -95,7 +99,7 @@ export const rinnaPingCronJob = pubsub.schedule('every 5 minutes').onRun(async (
 			},
 			{
 				headers: {
-					Authorization: `OAuth ${config.statuspage.token}`,
+					Authorization: `OAuth ${STATUSPAGE_TOKEN.value()}`,
 				},
 			},
 		);
@@ -105,12 +109,12 @@ export const rinnaPingCronJob = pubsub.schedule('every 5 minutes').onRun(async (
 		}
 		subscription.removeAllListeners('message');
 
-		logger.info(`Deleting subscription ${subscriptionId}`);
+		logInfo(`Deleting subscription ${subscriptionId}`);
 		await subscription.delete();
-		logger.info(`Deleted subscription ${subscriptionId}`);
+		logInfo(`Deleted subscription ${subscriptionId}`);
 
-		logger.info(`Deleting topic ${topicId}`);
+		logInfo(`Deleting topic ${topicId}`);
 		await topic.delete();
-		logger.info(`Deleted topic ${topicId}`);
+		logInfo(`Deleted topic ${topicId}`);
 	}
 });

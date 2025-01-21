@@ -1,13 +1,16 @@
 import unicodeNames from '@unicode/unicode-14.0.0/Names/index.js';
 import download from 'download';
 import emojiData from 'emoji-data';
-import {logger, pubsub, config as getConfig} from 'firebase-functions';
+import {info as logInfo} from 'firebase-functions/logger';
+import {defineList, defineString} from 'firebase-functions/params';
+import {onSchedule} from 'firebase-functions/v2/scheduler';
 import inRange from 'lodash/inRange.js';
 import sample from 'lodash/sample.js';
 import {webClient as slack} from '../slack.js';
 import {getWaka} from './lib/waka.js';
 
-const config = getConfig();
+const URLS_TWEETS_JSON = defineString('URLS_TWEETS_JSON');
+const SLACK_TOKENS = defineList('SLACK_TOKENS');
 
 const derivedNames = [
 	{start: 0x3400, end: 0x4DB5},
@@ -43,18 +46,19 @@ const unicodes = [...unicodeNames.entries()].filter(([codepoint, name]) => {
 	return true;
 });
 
-export const updateSlackStatusesCronJob = pubsub.schedule('every 10 minutes').onRun(async () => {
-	logger.info('updateSlackStatusesCronJob started');
+export const updateSlackStatusesCronJob = onSchedule('every 10 minutes', async () => {
+	logInfo('updateSlackStatusesCronJob started');
 
-	const tweetsBuffer = await download(config.urls.tweets_json);
+	const tweetsBuffer = await download(URLS_TWEETS_JSON.value());
 	const tweets = JSON.parse(tweetsBuffer.toString());
 	const statusText = sample(tweets).replace(/\n/g, '　');
 
 	const emojis = emojiData.all();
+	const slackTokens = SLACK_TOKENS.value().map((token) => token.split(':'));
 
-	for (const token of Object.values(config.slack.tokens as Record<string, string>)) {
+	for (const [, token] of slackTokens) {
 		const {team} = await slack.team.info({token});
-		logger.info(`Updating status for team ${team?.name}...`);
+		logInfo(`Updating status for team ${team?.name}...`);
 
 		const {emoji: customEmojis} = await slack.emoji.list({token});
 		const totalEmojis = [
@@ -68,9 +72,9 @@ export const updateSlackStatusesCronJob = pubsub.schedule('every 10 minutes').on
 		const [unicodePoint, unicodeName] = sample(unicodes)!;
 		const name = `U-${unicodePoint.toString(16).toUpperCase().padStart(4, '0')} ${unicodeName}`;
 
-		logger.info(`New status: ${statusEmoji} ${statusText}`);
-		logger.info(`New title: ${waka}`);
-		logger.info(`New name: ${name}`);
+		logInfo(`New status: ${statusEmoji} ${statusText}`);
+		logInfo(`New title: ${waka}`);
+		logInfo(`New name: ${name}`);
 
 		await slack.users.profile.set({
 			token,
