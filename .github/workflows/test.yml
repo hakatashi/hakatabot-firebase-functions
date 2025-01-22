@@ -54,4 +54,30 @@ jobs:
         with:
           args: deploy
         env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          # Firebase secrets
+          FIREBASE_TOKEN: ${{secrets.FIREBASE_TOKEN}}
+          # Deployment environment secrets
+          API_TOKEN: ${{secrets.API_TOKEN}}
+          BLUESKY_PASSWORD: ${{secrets.BLUESKY_PASSWORD}}
+          BLUESKY_USERNAME: ${{secrets.BLUESKY_USERNAME}}
+          FITBIT_CLIENT_ID: ${{secrets.FITBIT_CLIENT_ID}}
+          FITBIT_CLIENT_SECRET: ${{secrets.FITBIT_CLIENT_SECRET}}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          GOOGLE_CLIENT_ID: ${{secrets.GOOGLE_CLIENT_ID}}
+          GOOGLE_CLIENT_SECRET: ${{secrets.GOOGLE_CLIENT_SECRET}}
+          MASTODON_ACCESS_TOKEN: ${{secrets.MASTODON_ACCESS_TOKEN}}
+          MASTODON_HOSTNAME: ${{secrets.MASTODON_HOSTNAME}}
+          SCRAPBOX_SID: ${{secrets.SCRAPBOX_SID}}
+          SLACK_CHANNELS_GENSHIN: ${{secrets.SLACK_CHANNELS_GENSHIN}}
+          SLACK_SIGNING_SECRET: ${{secrets.SLACK_SIGNING_SECRET}}
+          SLACK_TOKEN: ${{secrets.SLACK_TOKEN}}
+          SLACK_TOKENS: ${{secrets.SLACK_TOKENS}}
+          STATUSPAGE_COMPONENT_ID: ${{secrets.STATUSPAGE_COMPONENT_ID}}
+          STATUSPAGE_PAGE_ID: ${{secrets.STATUSPAGE_PAGE_ID}}
+          STATUSPAGE_TOKEN: ${{secrets.STATUSPAGE_TOKEN}}
+          THREADS_PASSWORD: ${{secrets.THREADS_PASSWORD}}
+          THREADS_POST_URL: ${{secrets.THREADS_POST_URL}}
+          THREADS_USERNAME: ${{secrets.THREADS_USERNAME}}
+          THREADS_USER_AGENT: ${{secrets.THREADS_USER_AGENT}}
+          THREADS_USER_ID: ${{secrets.THREADS_USER_ID}}
+          URLS_TWEETS_JSON: ${{secrets.URLS_TWEETS_JSON}}
