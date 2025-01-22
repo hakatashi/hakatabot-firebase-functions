@@ -2,8 +2,8 @@ import assert from 'node:assert';
 import {onRequest} from 'firebase-functions/v2/https';
 import {google} from 'googleapis';
 import {GoogleTokens, FitbitTokens, AnimeWatchRecords} from './firestore.js';
-import {getClient as getFitbitClient} from './fitbit.js';
-import {getClient as getGoogleClient} from './google.js';
+import {client as fitbitClient} from './fitbit.js';
+import {oauth2Client} from './google.js';
 
 export {slackEvent} from './slack.js';
 export * from './crons/index.js';
@@ -12,8 +12,7 @@ export * from './api/index.js';
 const oauth2 = google.oauth2('v2');
 
 export const authenticateGoogleApi = onRequest((request, response) => {
-	const googleClient = getGoogleClient();
-	const url = googleClient.generateAuthUrl({
+	const url = oauth2Client.generateAuthUrl({
 		access_type: 'offline',
 		scope: [
 			'https://www.googleapis.com/auth/photoslibrary',
@@ -32,12 +31,11 @@ export const googleApiOauthCallback = onRequest(async (request, response) => {
 		response.sendStatus(400).end();
 		return;
 	}
-	const googleClient = getGoogleClient();
-	const {tokens} = await googleClient.getToken(code);
+	const {tokens} = await oauth2Client.getToken(code);
 
-	googleClient.setCredentials(tokens);
+	oauth2Client.setCredentials(tokens);
 
-	const tokenInfo = await oauth2.tokeninfo({auth: googleClient});
+	const tokenInfo = await oauth2.tokeninfo({auth: oauth2Client});
 	if (!tokenInfo.data || !tokenInfo.data.email) {
 		response.sendStatus(500).end();
 		return;
@@ -60,7 +58,7 @@ export const authenticateFitbitApi = onRequest((request, response) => {
 		return;
 	}
 
-	const authorizationUri = getFitbitClient().authorizeURL({
+	const authorizationUri = fitbitClient.authorizeURL({
 		redirect_uri: 'https://us-central1-hakatabot-firebase-functions.cloudfunctions.net/fitbitApiOauthCallback',
 		scope: scopes.map((scope) => scope.toString()),
 	});
@@ -75,7 +73,7 @@ export const fitbitApiOauthCallback = onRequest(async (request, response) => {
 		return;
 	}
 
-	const accessToken = await getFitbitClient().getToken({
+	const accessToken = await fitbitClient.getToken({
 		code,
 		redirect_uri: 'https://us-central1-hakatabot-firebase-functions.cloudfunctions.net/fitbitApiOauthCallback',
 	});

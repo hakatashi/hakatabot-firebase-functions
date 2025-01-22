@@ -3,13 +3,13 @@ import qs from 'node:querystring';
 import type {File} from '@slack/web-api/dist/types/response/FilesUploadResponse.js';
 import axios from 'axios';
 import {info as logInfo, error as logError} from 'firebase-functions/logger';
-import {defineSecret} from 'firebase-functions/params';
+import {defineString} from 'firebase-functions/params';
 import {onRequest} from 'firebase-functions/v2/https';
 import {SANDBOX_ID} from '../const.js';
 import {postBluesky, postMastodon, postThreads} from '../crons/lib/social.js';
-import {getClient as getSlackClient} from '../slack.js';
+import {webClient as slack} from '../slack.js';
 
-const API_TOKEN = defineSecret('API_TOKEN');
+const API_TOKEN = defineString('API_TOKEN');
 
 export const updateSocialPost = onRequest(async (request, response) => {
 	logInfo('updateSocialPost started');
@@ -173,7 +173,6 @@ export const updateSocialPost = onRequest(async (request, response) => {
 	// Update Slack status
 	if (destinations.includes('slack')) {
 		const files: File[] = [];
-		const slack = getSlackClient();
 
 		if (images.length > 0) {
 			const res = await slack.files.uploadV2({

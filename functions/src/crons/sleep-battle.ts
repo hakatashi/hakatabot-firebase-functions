@@ -6,7 +6,7 @@ import {onSchedule} from 'firebase-functions/v2/scheduler';
 import {SANDBOX_ID} from '../const.js';
 import {FitbitTokens, State} from '../firestore.js';
 import {get} from '../fitbit.js';
-import {getClient as getSlackClient} from '../slack.js';
+import {webClient as slack} from '../slack.js';
 import sleepScorePredicter from './lib/sleep.js';
 
 interface UserRank {
@@ -150,7 +150,6 @@ export const sleepBattleCronJob = onSchedule(
 			return `＊${username}＊`;
 		};
 
-		const slack = getSlackClient();
 		await slack.chat.postMessage({
 			as_user: true,
 			channel: SANDBOX_ID,

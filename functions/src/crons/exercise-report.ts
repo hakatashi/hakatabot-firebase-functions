@@ -7,7 +7,7 @@ import last from 'lodash/last.js';
 import {FITNESS_ID} from '../const.js';
 import {AnimeWatchRecords, FitbitActivities} from '../firestore.js';
 import {get} from '../fitbit.js';
-import {getClient as getSlackClient} from '../slack.js';
+import {webClient as slack} from '../slack.js';
 
 export const exerciseGetCronJob = onSchedule('every 5 minutes', async (event) => {
 	logInfo('Getting fitbit activities...');
@@ -79,8 +79,6 @@ export const exercisePostCronJob = onDocumentWritten('fitbit-activities/{logId}'
 
 			const mets = latestWeight ? calories / rawExerciseMinutes * 60 / latestWeight : null;
 			const metsString = mets ? ` [${mets.toFixed(2)}METs]` : '';
-
-			const slack = getSlackClient();
 
 			await slack.chat.postMessage({
 				as_user: true,

@@ -1,14 +1,14 @@
 import axios from 'axios';
 import {info as logInfo, error as logError} from 'firebase-functions/logger';
-import {defineSecret} from 'firebase-functions/params';
+import {defineString} from 'firebase-functions/params';
 import {onDocumentUpdated} from 'firebase-functions/v2/firestore';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 import {SteamFriends, db} from '../firestore.js';
-import {getClient as getSlackClient} from '../slack.js';
+import {webClient as slack} from '../slack.js';
 
-const STEAM_API_KEY = defineSecret('STEAM_API_KEY');
-const STEAM_HAKATASHI_ID = defineSecret('STEAM_HAKATASHI_ID');
-const SLACK_CHANNELS__HAKATASHI = defineSecret('SLACK_CHANNELS__HAKATASHI');
+const STEAM_API_KEY = defineString('STEAM_API_KEY');
+const STEAM_HAKATASHI_ID = defineString('STEAM_HAKATASHI_ID');
+const SLACK_CHANNELS__HAKATASHI = defineString('SLACK_CHANNELS__HAKATASHI');
 
 interface GetFriendListResponse {
 	friendslist: {
@@ -154,8 +154,8 @@ export const onSteamFriendStatusChanged = onDocumentUpdated('steam-friends/{stea
 
 		logInfo(`Posting message: ${message}`);
 
-		const slack = getSlackClient();
 		const postedMessage = await slack.chat.postMessage({
+
 			channel: SLACK_CHANNELS__HAKATASHI.value(),
 			text: message,
 			icon_url: after.avatarfull,
