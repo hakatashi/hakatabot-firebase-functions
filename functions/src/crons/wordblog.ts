@@ -6,7 +6,7 @@ import {onSchedule} from 'firebase-functions/v2/scheduler';
 import type {ScheduledEvent} from 'firebase-functions/v2/scheduler';
 import {postBluesky, postMastodon, postThreads} from './lib/social.js';
 
-const GITHUB_TOKEN = defineString('GITHUB_TOKEN');
+const FIREBASE_GITHUB_TOKEN = defineString('FIREBASE_GITHUB_TOKEN');
 const SCRAPBOX_SID = defineString('SCRAPBOX_SID');
 
 interface ScrapboxUser {
@@ -50,7 +50,7 @@ interface Entry {
 }
 
 const github = new Octokit({
-	auth: GITHUB_TOKEN.value(),
+	auth: FIREBASE_GITHUB_TOKEN.value(),
 });
 
 const getCite = (cite: string, word: string) => {

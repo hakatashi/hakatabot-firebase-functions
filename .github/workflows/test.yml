@@ -38,6 +38,8 @@ jobs:
     needs: [test, lint]
     if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
     runs-on: ubuntu-latest
+    environment:
+      name: production
     steps:
       - name: Checkout Repo
         uses: actions/checkout@master
