@@ -60,9 +60,9 @@ jobs:
           API_TOKEN: ${{secrets.API_TOKEN}}
           BLUESKY_PASSWORD: ${{secrets.BLUESKY_PASSWORD}}
           BLUESKY_USERNAME: ${{secrets.BLUESKY_USERNAME}}
+          FIREBASE_GITHUB_TOKEN: ${{secrets.FIREBASE_GITHUB_TOKEN}}
           FITBIT_CLIENT_ID: ${{secrets.FITBIT_CLIENT_ID}}
           FITBIT_CLIENT_SECRET: ${{secrets.FITBIT_CLIENT_SECRET}}
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           GOOGLE_CLIENT_ID: ${{secrets.GOOGLE_CLIENT_ID}}
           GOOGLE_CLIENT_SECRET: ${{secrets.GOOGLE_CLIENT_SECRET}}
           MASTODON_ACCESS_TOKEN: ${{secrets.MASTODON_ACCESS_TOKEN}}
