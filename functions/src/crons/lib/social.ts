@@ -48,7 +48,7 @@ export const postMastodon = async (text: string, images: Image[] = []) => {
 
 	for (const image of images) {
 		const formData = new FormData();
-		const blob = new Blob([image.data.buffer], {
+		const blob = new Blob([image.data], {
 			type: imageFormatToMimeType(image.format)!,
 		});
 		formData.append('file', blob, `image.${image.format}`);
