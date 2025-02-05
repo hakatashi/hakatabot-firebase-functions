@@ -215,6 +215,8 @@ eventAdapter.on('message', async (message: Message) => {
 		return;
 	}
 
+	const normalizedText = (message.text ?? '').normalize('NFKC');
+
 	await db.runTransaction(async (transaction) => {
 		const state = await transaction.get(States.doc('slack-rinna-signal'));
 		const recentBotMessages = (state.get('recentBotMessages') as Message[]) ?? [];
@@ -228,7 +230,7 @@ eventAdapter.on('message', async (message: Message) => {
 			message.user !== 'USLACKBOT' &&
 			message.user !== TSGBOT_ID
 		) {
-			if (message.text === '@りんな optout') {
+			if (normalizedText === '@りんな optout') {
 				optoutUsers.push(message.user);
 				transaction.set(state.ref, {
 					optoutUsers: Array.from(new Set(optoutUsers)),
@@ -241,7 +243,7 @@ eventAdapter.on('message', async (message: Message) => {
 				return;
 			}
 
-			if (message.text === '@りんな optin') {
+			if (normalizedText === '@りんな optin') {
 				transaction.set(state.ref, {
 					optoutUsers: optoutUsers.filter((user) => user !== message.user),
 				}, {merge: true});
@@ -284,7 +286,7 @@ eventAdapter.on('message', async (message: Message) => {
 			typeof message.bot_id === 'string' ||
 			message.user === 'USLACKBOT' ||
 			message.user === TSGBOT_ID ||
-			isRinnaSignalBlockList(message.text ?? '')
+			isRinnaSignalBlockList(normalizedText)
 		) {
 			recentBotMessages.push(message);
 		} else {
@@ -298,7 +300,7 @@ eventAdapter.on('message', async (message: Message) => {
 		if (
 			(
 				isTrueHumanMessage &&
-				matchRinnaSignalText(message.text ?? '')
+				matchRinnaSignalText(normalizedText)
 			) ||
 			(
 				newHumanMessages.length >= 5 &&
