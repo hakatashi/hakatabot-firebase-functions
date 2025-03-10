@@ -10,7 +10,7 @@
     "@types/form-data": "^2.5.0",
     "@types/jest": "^29.5.14",
     "@types/jest-when": "^3.5.5",
-    "@types/node": "^22.13.9",
+    "@types/node": "^22.13.10",
     "@types/oauth": "^0.9.6",
     "@types/simple-oauth2": "^5.0.7",
     "@typescript-eslint/eslint-plugin": "^8.26.1",
