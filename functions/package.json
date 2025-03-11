@@ -37,7 +37,7 @@
     "googleapis": "^146.0.0",
     "lodash": "^4.17.21",
     "ml-regression-multivariate-linear": "^2.0.4",
-    "oauth": "^0.10.0",
+    "oauth": "^0.10.2",
     "scrape-it": "^6.1.4",
     "simple-oauth2": "^5.1.0"
   },
