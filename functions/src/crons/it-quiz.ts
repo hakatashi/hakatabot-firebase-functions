@@ -115,6 +115,7 @@ export const itQuizProgressCronJob = onSchedule(
 	{
 		schedule: '0 19 * * *',
 		timeZone: 'Asia/Tokyo',
+		memory: '512MiB',
 	},
 	async (context) => {
 		const timestamp = dayjs(context.scheduleTime).tz('Asia/Tokyo');
@@ -162,6 +163,7 @@ export const itQuizMilestoneProgressCronJob = onSchedule(
 	{
 		schedule: 'every 10 minutes',
 		timeZone: 'Asia/Tokyo',
+		memory: '512MiB',
 	},
 	async (context) => {
 		const timestamp = dayjs(context.scheduleTime).tz('Asia/Tokyo');
