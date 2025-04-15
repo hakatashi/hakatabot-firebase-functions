@@ -2,11 +2,13 @@ import path from 'node:path';
 import qs from 'node:querystring';
 import type {File} from '@slack/web-api/dist/types/response/FilesUploadResponse.js';
 import axios from 'axios';
+import {Timestamp} from 'firebase-admin/firestore';
 import {info as logInfo, error as logError} from 'firebase-functions/logger';
 import {defineString} from 'firebase-functions/params';
 import {onRequest} from 'firebase-functions/v2/https';
 import {SANDBOX_ID} from '../const.js';
 import {postBluesky, postMastodon, postThreads} from '../crons/lib/social.js';
+import {db, States} from '../firestore.js';
 import {webClient as slack} from '../slack.js';
 
 const API_TOKEN = defineString('API_TOKEN');
@@ -199,3 +201,88 @@ export const updateSocialPost = onRequest(async (request, response) => {
 	response.send('OK');
 });
 
+type Cookies = Record<string, {
+	value: string,
+	expires: Timestamp,
+}>;
+
+export const postSession = onRequest(
+	{
+		memory: '512MiB',
+	},
+	async (request, response) => {
+		logInfo('postSession started');
+
+		if (request.method !== 'POST') {
+			response.status(405);
+			response.send('Method Not Allowed');
+			return;
+		}
+
+		const {apikey, id, session, expirationDate} = JSON.parse(request.rawBody.toString());
+
+		if (apikey !== API_TOKEN.value()) {
+			logError(`Invalid apikey: ${apikey}`);
+			response.status(403);
+			response.send('Forbidden');
+			return;
+		}
+
+		if (id !== 'luna') {
+			logError(`Invalid id: ${id}`);
+			response.status(400);
+			response.send('Bad Request');
+			return;
+		}
+
+		if (typeof session !== 'string') {
+			logError(`Invalid session: ${session}`);
+			response.status(400);
+			response.send('Bad Request');
+			return;
+		}
+
+		if (typeof expirationDate !== 'number') {
+			logError(`Invalid expirationDate: ${expirationDate}`);
+			response.status(400);
+			response.send('Bad Request');
+			return;
+		}
+
+		logInfo(`Session: ${session}`);
+		logInfo(`Expiration date: ${expirationDate}`);
+
+		await db.runTransaction(async (transaction) => {
+			logInfo('Transaction started');
+			const state = await transaction.get(States.doc('luna'));
+			if (!state.exists) {
+				logError('State not found');
+				return;
+			}
+
+			logInfo('State found');
+			const cookies: Cookies = state.get('cookies');
+			if (cookies === undefined) {
+				logError('Cookies not found');
+				return;
+			}
+
+			const expires = cookies.luna_session?.expires?.toMillis() ?? 0;
+			logInfo(`Current session expires at: ${expires}`);
+			if (expires >= expirationDate * 1000) {
+				logInfo(`Session is already up-to-date (${expires} >= ${expirationDate * 1000})`);
+				return;
+			}
+
+			logInfo(`Updating session to ${session}`);
+			transaction.update(States.doc('luna'), {
+				'cookies.luna_session': {
+					value: session,
+					expires: Timestamp.fromMillis(expirationDate * 1000),
+				},
+			});
+		});
+
+		response.send('OK');
+	},
+);
