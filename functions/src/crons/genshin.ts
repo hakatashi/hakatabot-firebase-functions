@@ -278,7 +278,10 @@ const getMarkupedSerialCode = (game: string, code: string) => {
 	return code;
 };
 
-export const postGenshinSerialCodesCronJob = onSchedule('every 20 minutes', async () => {
+export const postGenshinSerialCodesCronJob = onSchedule({
+	schedule: 'every 2 hours',
+	memory: '512MiB',
+}, async () => {
 	logInfo('postGenshinSerialCodesCronJob: started');
 
 	const now = Date.now();
