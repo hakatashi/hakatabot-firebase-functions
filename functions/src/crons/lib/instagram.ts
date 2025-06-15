@@ -23,7 +23,7 @@ interface InstagramInsightMetric {
 	values: {value: number}[];
 }
 
-export const getLatestInstagramVideoEngagements = async (accessToken: string): Promise<[string, InstagramEngagement][]> => {
+export const getLatestInstagramVideoEngagements = async (accessToken: string): Promise<{volume: string, engagements: InstagramEngagement}[]> => {
 	try {
 		// Get user's media using Instagram Basic Display API
 		const mediaResponse = await axios.get('https://graph.instagram.com/me/media', {
@@ -101,9 +101,10 @@ export const getLatestInstagramVideoEngagements = async (accessToken: string): P
 				});
 			}
 		}
-
 		// Convert to array and sort by volume number (newest first - highest number first)
-		return Array.from(engagementByVolume.entries()).sort(([a], [b]) => Number.parseInt(b) - Number.parseInt(a));
+		return Array.from(engagementByVolume.entries())
+			.sort(([a], [b]) => Number.parseInt(b) - Number.parseInt(a))
+			.map(([volume, engagements]) => ({volume, engagements}));
 	} catch (error) {
 		throw new Error(`Failed to fetch Instagram video engagements: ${error instanceof Error ? error.message : 'Unknown error'}`);
 	}

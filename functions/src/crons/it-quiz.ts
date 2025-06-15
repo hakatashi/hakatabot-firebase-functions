@@ -1,16 +1,22 @@
 import type {ChartConfiguration} from 'chart.js';
 import dayjs, {Dayjs} from 'dayjs';
 import {info as logInfo} from 'firebase-functions/logger';
+import {defineString} from 'firebase-functions/params';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 import {google} from 'googleapis';
-import {IT_QUIZ_GOOGLE_SHEET_ID, IT_QUIZ_ID} from '../const.js';
-import {ItQuizProgressStats, State} from '../firestore.js';
+import {IT_QUIZ_GOOGLE_SHEET_ID, IT_QUIZ_ID, IT_QUIZ_YOUTUBE_CHANNEL_ID} from '../const.js';
+import {ItQuizProgressStats, ItQuizVideoEngagements, State} from '../firestore.js';
 import {getGoogleAuth} from '../google.js';
 import {webClient as slack} from '../slack.js';
+import {getLatestInstagramVideoEngagements} from './lib/instagram.js';
+import {getLatestTikTokVideoEngagements} from './lib/tiktok.js';
+import {getLatestYouTubeVideoEngagements} from './lib/youtube.js';
 
 const weekdayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const state = new State('it-quiz');
+
+const INSTAGRAM_ACCESS_TOKEN = defineString('INSTAGRAM_ACCESS_TOKEN');
 
 const getItQuizStats = async () => {
 	const auth = await getGoogleAuth();
@@ -121,6 +127,22 @@ export const itQuizProgressCronJob = onSchedule(
 		const timestamp = dayjs(context.scheduleTime).tz('Asia/Tokyo');
 		const currentDate = timestamp.format('YYYY-MM-DD');
 		logInfo(`itQuizProgressCronJob triggered at ${timestamp} (date = ${currentDate})`);
+
+		const tikTokEngagement = await getLatestTikTokVideoEngagements();
+		logInfo(`itQuizMilestoneProgressCronJob: tikTokEngagement = ${JSON.stringify(tikTokEngagement)}, total days = ${tikTokEngagement.length}`);
+
+		const youtubeEngagement = await getLatestYouTubeVideoEngagements(IT_QUIZ_YOUTUBE_CHANNEL_ID);
+		logInfo(`itQuizMilestoneProgressCronJob: youtubeEngagement = ${JSON.stringify(youtubeEngagement)}, total days = ${youtubeEngagement.length}`);
+
+		const instagramEngagement = await getLatestInstagramVideoEngagements(INSTAGRAM_ACCESS_TOKEN.value());
+		logInfo(`itQuizMilestoneProgressCronJob: instagramEngagement = ${JSON.stringify(instagramEngagement)}, total days = ${instagramEngagement.length}`);
+
+		await ItQuizVideoEngagements.doc(timestamp.format()).set({
+			tikTok: tikTokEngagement,
+			youtube: youtubeEngagement,
+			instagram: instagramEngagement,
+			date: currentDate,
+		}, {merge: true});
 
 		const {done, ideas} = await getItQuizStats();
 		logInfo(`itQuizProgressCronJob: done = ${done}, ideas = ${ideas}`);

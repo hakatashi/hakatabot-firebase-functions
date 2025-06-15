@@ -13,12 +13,14 @@ export const db = firebase.firestore();
 export const GoogleTokens = db.collection('google-tokens');
 export const GoogleFoodPhotos = db.collection('google-food-photos');
 export const FitbitTokens = db.collection('fitbit-tokens');
+export const TikTokTokens = db.collection('tiktok-tokens');
 export const FitbitActivities = db.collection('fitbit-activities');
 export const FitbitSleeps = db.collection('fitbit-sleeps');
 export const AnimeWatchRecords = db.collection('anime-watch-records');
 export const ItQuizProgressStats = db.collection('it-quiz-progress-stats') as CollectionReference<ItQuizProgressStat>;
 export const States = db.collection('states');
 export const SteamFriends = db.collection('steam-friends');
+export const ItQuizVideoEngagements = db.collection('it-quiz-video-engagements');
 
 export class State {
 	doc: DocumentReference;

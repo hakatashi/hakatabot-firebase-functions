@@ -10,7 +10,7 @@ export interface YouTubeEngagement {
 	comments: number;
 }
 
-export const getLatestYouTubeVideoEngagements = async (channelId: string): Promise<[string, YouTubeEngagement][]> => {
+export const getLatestYouTubeVideoEngagements = async (channelId: string): Promise<{volume: string, engagements: YouTubeEngagement}[]> => {
 	const auth = await getGoogleAuth();
 
 	// First, get the channel's uploads playlist ID
@@ -76,7 +76,8 @@ export const getLatestYouTubeVideoEngagements = async (channelId: string): Promi
 			comments: existing.comments + comments,
 		});
 	}
-
 	// Convert to array and sort by volume number (newest first - highest number first)
-	return Array.from(engagementByVolume.entries()).sort(([a], [b]) => Number.parseInt(b) - Number.parseInt(a));
+	return Array.from(engagementByVolume.entries())
+		.sort(([a], [b]) => Number.parseInt(b) - Number.parseInt(a))
+		.map(([volume, engagements]) => ({volume, engagements}));
 };
