@@ -28,7 +28,7 @@ export const getTikTokAuthUrl = (redirectUri: string, scopes: string[] = ['user.
 		scope: scopes.join(','),
 		response_type: 'code',
 		redirect_uri: redirectUri,
-		state: 'tiktok_oauth_state', // You might want to make this dynamic for security
+		state: 'tiktok_oauth_state',
 	});
 
 	return `${baseUrl}?${params.toString()}`;
@@ -37,15 +37,15 @@ export const getTikTokAuthUrl = (redirectUri: string, scopes: string[] = ['user.
 export const getTikTokAccessToken = async (code: string, redirectUri: string): Promise<TikTokTokenResponse> => {
 	const tokenUrl = 'https://open.tiktokapis.com/v2/oauth/token/';
 
-	const data = {
+	const data = new URLSearchParams({
 		client_key: TIKTOK_CLIENT_ID.value(),
 		client_secret: TIKTOK_CLIENT_SECRET.value(),
 		code,
 		grant_type: 'authorization_code',
 		redirect_uri: redirectUri,
-	};
+	});
 
-	const response = await axios.post(tokenUrl, data, {
+	const response = await axios.post(tokenUrl, data.toString(), {
 		headers: {
 			'Content-Type': 'application/x-www-form-urlencoded',
 		},
@@ -61,14 +61,14 @@ export const getTikTokAccessToken = async (code: string, redirectUri: string): P
 export const refreshTikTokToken = async (refreshToken: string): Promise<TikTokTokenResponse> => {
 	const tokenUrl = 'https://open.tiktokapis.com/v2/oauth/token/';
 
-	const data = {
+	const data = new URLSearchParams({
 		client_key: TIKTOK_CLIENT_ID.value(),
 		client_secret: TIKTOK_CLIENT_SECRET.value(),
 		grant_type: 'refresh_token',
 		refresh_token: refreshToken,
-	};
+	});
 
-	const response = await axios.post(tokenUrl, data, {
+	const response = await axios.post(tokenUrl, data.toString(), {
 		headers: {
 			'Content-Type': 'application/x-www-form-urlencoded',
 		},
