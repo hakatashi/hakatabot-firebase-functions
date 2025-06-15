@@ -1,6 +1,7 @@
 export const HAKATASHI_ID = 'U04G7TL4P';
 export const HAKATASHI_EMAIL = 'hakatasiloving@gmail.com';
 export const HAKATASHI_FITBIT_ID = 'B2WHGL';
+export const HAKATASHI_TIKTOK_ID = '-000q3zbPzMjCCswB4GTJlZVNRLuSgVp_Xa-';
 export const TSGBOT_ID = 'UEJTPN6R5';
 export const SANDBOX_ID = 'C7AAX50QY';
 export const TSG_SLACKBOT_ID = 'BEHP604TV';
@@ -10,3 +11,4 @@ export const IT_QUIZ_ID = 'C059LFJF2CX';
 export const EXPIRATION_WINDOW_IN_SECONDS = 300;
 export const BILLBOARD_HOT100_ID = 'UCP3UgSH9dDuanz7cDAIkHxA.nGzAI5pLbMY';
 export const IT_QUIZ_GOOGLE_SHEET_ID = '1OjcWGGyEdqYBYXSSeF3iOXqHXJJdvcCpfjL22e2zKZU';
+export const IT_QUIZ_YOUTUBE_CHANNEL_ID = 'UCmGXjoj98-4jDsR3ebWMP7A';

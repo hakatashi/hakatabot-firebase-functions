@@ -39,11 +39,13 @@
     "ml-regression-multivariate-linear": "^2.0.4",
     "oauth": "^0.10.2",
     "scrape-it": "^6.1.5",
-    "simple-oauth2": "^5.1.0"
+    "simple-oauth2": "^5.1.0",
+    "tinycolor2": "^1.6.0"
   },
   "private": true,
   "devDependencies": {
     "@types/chart.js": "2.8.0",
+    "@types/tinycolor2": "^1.4.6",
     "chart.js": "2.8.0"
   }
 }
