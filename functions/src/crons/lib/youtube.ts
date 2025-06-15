@@ -50,31 +50,33 @@ export const getLatestYouTubeVideoEngagements = async (channelId: string): Promi
 
 	if (!videosResponse.data.items || videosResponse.data.items.length === 0) {
 		throw new Error('No video details found');
-	}
-	// Group videos by publication date and aggregate engagement
-	const engagementByDay = new Map<string, YouTubeEngagement>();
+	}	// Group videos by volume number and aggregate engagement
+	const engagementByVolume = new Map<string, YouTubeEngagement>();
 
 	for (const video of videosResponse.data.items) {
-		const publishedAt = video.snippet?.publishedAt;
-		if (!publishedAt) {
+		const title = video.snippet?.title;
+		if (!title) {
 			continue;
 		}
-
-		// Extract date in YYYY-MM-DD format
-		const date = new Date(publishedAt).toISOString().split('T')[0];
+		// Extract volume number from title (format: "#number")
+		const volumeMatch = title.match(/#(?<volume>\d+)/);
+		if (!volumeMatch || !volumeMatch.groups) {
+			continue; // Skip videos without volume numbers
+		}
+		const volume = volumeMatch.groups.volume;
 
 		const impressions = Number.parseInt(video.statistics?.viewCount || '0');
 		const likes = Number.parseInt(video.statistics?.likeCount || '0');
 		const comments = Number.parseInt(video.statistics?.commentCount || '0');
 
-		const existing = engagementByDay.get(date) || {impressions: 0, likes: 0, comments: 0};
-		engagementByDay.set(date, {
+		const existing = engagementByVolume.get(volume) || {impressions: 0, likes: 0, comments: 0};
+		engagementByVolume.set(volume, {
 			impressions: existing.impressions + impressions,
 			likes: existing.likes + likes,
 			comments: existing.comments + comments,
 		});
 	}
 
-	// Convert to array and sort by date (newest first)
-	return Array.from(engagementByDay.entries()).sort(([a], [b]) => b.localeCompare(a));
+	// Convert to array and sort by volume number (newest first - highest number first)
+	return Array.from(engagementByVolume.entries()).sort(([a], [b]) => Number.parseInt(b) - Number.parseInt(a));
 };

@@ -45,10 +45,20 @@ export const getLatestInstagramVideoEngagements = async (accessToken: string): P
 			throw new Error('No video content found in recent posts');
 		}
 
+		logInfo(`[getLatestInstagramVideoEngagements] Found ${videoMedia.length} video posts`);
+
 		// Get detailed insights for each video
-		const engagementByDay = new Map<string, InstagramEngagement>();
+		const engagementByVolume = new Map<string, InstagramEngagement>();
 
 		for (const video of videoMedia) {
+			// Extract volume number from caption (format: "#number")
+			const caption = video.caption || '';
+			const volumeMatch = caption.match(/#(?<volume>\d+)/);
+			if (!volumeMatch || !volumeMatch.groups) {
+				continue; // Skip videos without volume numbers
+			}
+			const volume = volumeMatch.groups.volume;
+
 			try {
 				logInfo(`[getLatestInstagramVideoEngagements] Fetching insights for video ID: ${video.id}`);
 
@@ -60,34 +70,31 @@ export const getLatestInstagramVideoEngagements = async (accessToken: string): P
 					},
 				});
 
-				// Extract date in YYYY-MM-DD format
-				const date = new Date(video.timestamp).toISOString().split('T')[0];
-
 				// Parse engagement metrics
 				const insights = insightsResponse.data.data;
 				const impressions = insights.find((metric: InstagramInsightMetric) => metric.name === 'views')?.values[0]?.value || 0;
 				const likes = insights.find((metric: InstagramInsightMetric) => metric.name === 'likes')?.values[0]?.value || 0;
 				const comments = insights.find((metric: InstagramInsightMetric) => metric.name === 'comments')?.values[0]?.value || 0;
 
-				// Aggregate engagement by day
-				const existing = engagementByDay.get(date) || {impressions: 0, likes: 0, comments: 0};
-				engagementByDay.set(date, {
+				// Aggregate engagement by volume
+				const existing = engagementByVolume.get(volume) || {impressions: 0, likes: 0, comments: 0};
+				engagementByVolume.set(volume, {
 					impressions: existing.impressions + impressions,
 					likes: existing.likes + likes,
 					comments: existing.comments + comments,
 				});
-			} catch (insightError: any) {
+			} catch (insightError: unknown) {
 				// Instagram Basic Display API might not have access to insights
 				// Fall back to public metrics if available
-				logWarn(`Could not get insights for video ${video.id}:`, insightError?.response?.data || insightError);
+				const errorData = (insightError as {response?: {data?: unknown}})?.response?.data || insightError;
+				logWarn(`Could not get insights for video ${video.id}:`, errorData);
 
 				// Try to get basic metrics from the media object itself
-				const date = new Date(video.timestamp).toISOString().split('T')[0];
-				const existing = engagementByDay.get(date) || {impressions: 0, likes: 0, comments: 0};
+				const existing = engagementByVolume.get(volume) || {impressions: 0, likes: 0, comments: 0};
 
 				// Note: Basic Display API doesn't provide view counts or detailed metrics
 				// This is a limitation of the API - you'd need Instagram Graph API for business accounts
-				engagementByDay.set(date, {
+				engagementByVolume.set(volume, {
 					impressions: existing.impressions, // Not available in Basic Display API
 					likes: existing.likes + (video.like_count || 0),
 					comments: existing.comments + (video.comments_count || 0),
@@ -95,8 +102,8 @@ export const getLatestInstagramVideoEngagements = async (accessToken: string): P
 			}
 		}
 
-		// Convert to array and sort by date (newest first)
-		return Array.from(engagementByDay.entries()).sort(([a], [b]) => b.localeCompare(a));
+		// Convert to array and sort by volume number (newest first - highest number first)
+		return Array.from(engagementByVolume.entries()).sort(([a], [b]) => Number.parseInt(b) - Number.parseInt(a));
 	} catch (error) {
 		throw new Error(`Failed to fetch Instagram video engagements: ${error instanceof Error ? error.message : 'Unknown error'}`);
 	}
