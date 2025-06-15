@@ -344,15 +344,17 @@ export const itQuizProgressCronJob = onSchedule(
 			const imageChartsUrl = await getItQuizVideoEngagementsImageUrl(timestamp);
 			logInfo(`itQuizProgressCronJob: imageChartsUrl = ${imageChartsUrl}`);
 
-			const lastYouTubeVideoImpressions = youtubeEngagement[youtubeEngagement.length - 1]?.engagements.impressions || 0;
-			const lastTikTokVideoImpressions = tikTokEngagement[tikTokEngagement.length - 1]?.engagements.impressions || 0;
-			const lastInstagramVideoImpressions = instagramEngagement[instagramEngagement.length - 1]?.engagements.impressions || 0;
+			const youTubeImpressionsOfLastVideo = youtubeEngagement[0]?.engagements.impressions ?? 0;
+			const tikTokImpressionsOfLastVideo = tikTokEngagement[0]?.engagements.impressions ?? 0;
+			const instagramImpressionsOfLastVideo = instagramEngagement[0]?.engagements.impressions ?? 0;
 
 			const slackText = [
 				'【前回のITクイズ動画の視聴回数】',
-				`YouTube: ＊${lastYouTubeVideoImpressions}回＊`,
-				`TikTok: ＊${lastTikTokVideoImpressions}回＊`,
-				`Instagram: ＊${lastInstagramVideoImpressions}回＊`,
+				[
+					`YouTube: ＊${youTubeImpressionsOfLastVideo}回＊`,
+					`TikTok: ＊${tikTokImpressionsOfLastVideo}回＊`,
+					`Instagram: ＊${instagramImpressionsOfLastVideo}回＊`,
+				].join(' / '),
 			].join('\n');
 
 			const slackMessage = await slack.chat.postMessage({
