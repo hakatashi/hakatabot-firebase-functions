@@ -39,8 +39,6 @@ export const getLatestTikTokVideoEngagements = async (): Promise<{volume: string
 			fields: 'id,title,video_description,create_time,cover_image_url,share_url,view_count,like_count,comment_count,share_count',
 		});
 
-		logInfo(responseData);
-
 		if (!responseData.data.videos || responseData.data.videos.length === 0) {
 			throw new Error('No videos found for the TikTok account');
 		}

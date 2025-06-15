@@ -1,11 +1,15 @@
+import qs from 'node:querystring';
 import type {ChartConfiguration} from 'chart.js';
 import dayjs, {Dayjs} from 'dayjs';
 import {info as logInfo} from 'firebase-functions/logger';
 import {defineString} from 'firebase-functions/params';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 import {google} from 'googleapis';
+import range from 'lodash/range.js';
+import sortBy from 'lodash/sortBy.js';
+import tinycolor from 'tinycolor2';
 import {IT_QUIZ_GOOGLE_SHEET_ID, IT_QUIZ_ID, IT_QUIZ_YOUTUBE_CHANNEL_ID} from '../const.js';
-import {ItQuizProgressStats, ItQuizVideoEngagements, State} from '../firestore.js';
+import {ItQuizProgressStats, ItQuizVideoEngagements, ItQuizVideoEngagementStats, State} from '../firestore.js';
 import {getGoogleAuth} from '../google.js';
 import {webClient as slack} from '../slack.js';
 import {getLatestInstagramVideoEngagements} from './lib/instagram.js';
@@ -42,6 +46,10 @@ const getItQuizStats = async () => {
 
 	return {done, ideas};
 };
+
+const onlyEncodeSpecialChars = (str: string) => (
+	str.replace(/[%&=+# "]/g, (match) => encodeURIComponent(match))
+);
 
 const getItQuizStatsImageUrl = async (timestamp: Dayjs) => {
 	logInfo('itQuizProgressCronJob: Getting stats of past 2 weeks...');
@@ -106,14 +114,165 @@ const getItQuizStatsImageUrl = async (timestamp: Dayjs) => {
 		},
 	};
 
-	const imageChartsUrl = `https://image-charts.com/chart.js/2.8.0?${new URLSearchParams({
+	const imageChartsUrl = `https://image-charts.com/chart.js/2.8.0?${qs.stringify({
 		bkg: 'white',
 		c: JSON.stringify(imageChartsPayload),
 		width: '500',
 		height: '300',
+	}, undefined, undefined, {
+		encodeURIComponent: onlyEncodeSpecialChars,
 	})}`;
 	logInfo(`itQuizProgressCronJob: imageChartsUrl = ${imageChartsUrl}`);
 
+	return imageChartsUrl;
+};
+
+const getVideoEngagementsHistory = (
+	engagements: ItQuizVideoEngagementStats[],
+	volume: string,
+	platform: 'tiktok' | 'youtube' | 'instagram',
+) => {
+	const firstNonZeroIndex = engagements.findIndex((eng) => {
+		const platformEngagements = eng[platform];
+		if (!platformEngagements) {
+			return false;
+		}
+		const videoEngagements = platformEngagements.find((vid) => vid.volume === volume);
+		if (!videoEngagements) {
+			return false;
+		}
+		return videoEngagements.engagements.impressions > 0;
+	});
+
+	if (firstNonZeroIndex === -1) {
+		return Array(7).fill(0);
+	}
+
+	const engagementsToConsider = engagements.slice(firstNonZeroIndex, firstNonZeroIndex + 7);
+
+	let previousImpressions = 0;
+	const results: number[] = [];
+
+	for (const engagement of engagementsToConsider) {
+		if (!engagement[platform]) {
+			results.push(0);
+			continue;
+		}
+
+		const platformEngagements = engagement[platform];
+		const video = platformEngagements.find((vid) => vid.volume === volume);
+		if (!video) {
+			results.push(0);
+			continue;
+		}
+
+		const impressions = video.engagements.impressions;
+		if (impressions > previousImpressions) {
+			results.push(impressions - previousImpressions);
+			previousImpressions = impressions;
+		} else {
+			results.push(0);
+		}
+	}
+
+	return results;
+};
+
+const getItQuizVideoEngagementsImageUrl = async (timestamp: Dayjs) => {
+	logInfo('itQuizVideoEngagementsImageUrl: Getting stats of past 14 days...');
+	const results = await ItQuizVideoEngagements
+		.where('date', '>=', timestamp.subtract(13, 'day').format('YYYY-MM-DD'))
+		.orderBy('date', 'asc')
+		.get();
+
+	const engagements = results.docs.map((doc) => doc.data());
+	logInfo(`itQuizVideoEngagementsImageUrl: engagements = ${JSON.stringify(engagements)}`);
+
+	const videoVolumes = new Set<string>();
+	for (const engagement of engagements) {
+		for (const platform of ['tiktok', 'youtube', 'instagram'] as const) {
+			if (engagement[platform]) {
+				for (const video of engagement[platform]) {
+					videoVolumes.add(video.volume);
+				}
+			}
+		}
+	}
+
+	const latestVideoVolumes = Array.from(videoVolumes).sort((a, b) => (
+		Number.parseInt(a) - Number.parseInt(b)
+	)).slice(-7);
+
+	const videoEngagementStats: {volume: string, tiktok: number[], youtube: number[], instagram: number[]}[] = [];
+	for (const volume of latestVideoVolumes) {
+		const tiktokEngagements = getVideoEngagementsHistory(engagements, volume, 'tiktok');
+		const youtubeEngagements = getVideoEngagementsHistory(engagements, volume, 'youtube');
+		const instagramEngagements = getVideoEngagementsHistory(engagements, volume, 'instagram');
+		videoEngagementStats.push({
+			volume,
+			tiktok: tiktokEngagements,
+			youtube: youtubeEngagements,
+			instagram: instagramEngagements,
+		});
+	}
+
+	const imageChartsPayload: ChartConfiguration = {
+		type: 'bar',
+		data: {
+			labels: videoEngagementStats.map((stat) => `#${stat.volume}`),
+			datasets: sortBy(range(5).flatMap((index) => [
+				{
+					label: `TikTok (Day ${index + 1})`,
+					backgroundColor: tinycolor('#AAAAAA').darken(index / 6 * 50).toRgbString(),
+					data: videoEngagementStats.map((stat) => stat.tiktok[index] ?? 0),
+					fill: true,
+				},
+				{
+					label: `YouTube (Day ${index + 1})`,
+					backgroundColor: tinycolor('#FF6384').darken(index / 6 * 50).toRgbString(),
+					data: videoEngagementStats.map((stat) => stat.youtube[index] ?? 0),
+					fill: true,
+				},
+				{
+					label: `Instagram (Day ${index + 1})`,
+					backgroundColor: tinycolor('#FF9800').darken(index / 6 * 50).toRgbString(),
+					data: videoEngagementStats.map((stat) => stat.instagram[index] ?? 0),
+					fill: true,
+				},
+			]), 'label'),
+		},
+		options: {
+			title: {
+				display: true,
+				text: 'IT quiz video impressions',
+			},
+			scales: {
+				xAxes: [{
+					stacked: true,
+				}],
+				yAxes: [{
+					stacked: true,
+					ticks: {
+						beginAtZero: true,
+					},
+				}],
+			},
+			legend: {
+				display: true,
+			},
+		},
+	};
+
+	const imageChartsUrl = `https://image-charts.com/chart.js/2.8.0?${qs.stringify({
+		bkg: 'white',
+		c: JSON.stringify(imageChartsPayload),
+		width: '1600',
+		height: '800',
+	}, undefined, undefined, {
+		encodeURIComponent: onlyEncodeSpecialChars,
+	})}`;
+
+	logInfo(`itQuizVideoEngagementsImageUrl: imageChartsUrl = ${imageChartsUrl}`);
 	return imageChartsUrl;
 };
 
@@ -128,22 +287,6 @@ export const itQuizProgressCronJob = onSchedule(
 		const currentDate = timestamp.format('YYYY-MM-DD');
 		logInfo(`itQuizProgressCronJob triggered at ${timestamp} (date = ${currentDate})`);
 
-		const tikTokEngagement = await getLatestTikTokVideoEngagements();
-		logInfo(`itQuizMilestoneProgressCronJob: tikTokEngagement = ${JSON.stringify(tikTokEngagement)}, total days = ${tikTokEngagement.length}`);
-
-		const youtubeEngagement = await getLatestYouTubeVideoEngagements(IT_QUIZ_YOUTUBE_CHANNEL_ID);
-		logInfo(`itQuizMilestoneProgressCronJob: youtubeEngagement = ${JSON.stringify(youtubeEngagement)}, total days = ${youtubeEngagement.length}`);
-
-		const instagramEngagement = await getLatestInstagramVideoEngagements(INSTAGRAM_ACCESS_TOKEN.value());
-		logInfo(`itQuizMilestoneProgressCronJob: instagramEngagement = ${JSON.stringify(instagramEngagement)}, total days = ${instagramEngagement.length}`);
-
-		await ItQuizVideoEngagements.doc(timestamp.format()).set({
-			tikTok: tikTokEngagement,
-			youtube: youtubeEngagement,
-			instagram: instagramEngagement,
-			date: currentDate,
-		}, {merge: true});
-
 		const {done, ideas} = await getItQuizStats();
 		logInfo(`itQuizProgressCronJob: done = ${done}, ideas = ${ideas}`);
 
@@ -153,31 +296,88 @@ export const itQuizProgressCronJob = onSchedule(
 			date: currentDate,
 		}, {merge: true});
 
-		const imageChartsUrl = await getItQuizStatsImageUrl(timestamp);
+		const tikTokEngagement = await getLatestTikTokVideoEngagements();
+		logInfo(`itQuizMilestoneProgressCronJob: tikTokEngagement = ${JSON.stringify(tikTokEngagement)}, total days = ${tikTokEngagement.length}`);
 
-		const slackText = `【ITクイズの現在の進捗】\n完了: ＊${done}問＊ / アイデア: ＊${ideas}問＊`;
-		const slackMessage = await slack.chat.postMessage({
-			channel: IT_QUIZ_ID,
-			username: 'ITクイズ進捗くん',
-			icon_emoji: ':quora:',
-			text: slackText,
-			blocks: [
-				{
-					type: 'section',
-					text: {
-						type: 'mrkdwn',
-						text: slackText,
+		const youtubeEngagement = await getLatestYouTubeVideoEngagements(IT_QUIZ_YOUTUBE_CHANNEL_ID);
+		logInfo(`itQuizMilestoneProgressCronJob: youtubeEngagement = ${JSON.stringify(youtubeEngagement)}, total days = ${youtubeEngagement.length}`);
+
+		const instagramEngagement = await getLatestInstagramVideoEngagements(INSTAGRAM_ACCESS_TOKEN.value());
+		logInfo(`itQuizMilestoneProgressCronJob: instagramEngagement = ${JSON.stringify(instagramEngagement)}, total days = ${instagramEngagement.length}`);
+
+		await ItQuizVideoEngagements.doc(currentDate).set({
+			tiktok: tikTokEngagement,
+			youtube: youtubeEngagement,
+			instagram: instagramEngagement,
+			date: currentDate,
+		}, {merge: true});
+
+		{
+			const imageChartsUrl = await getItQuizStatsImageUrl(timestamp);
+
+			const slackText = `【ITクイズの現在の進捗】\n完了: ＊${done}問＊ / アイデア: ＊${ideas}問＊`;
+			const slackMessage = await slack.chat.postMessage({
+				channel: IT_QUIZ_ID,
+				username: 'ITクイズ進捗くん',
+				icon_emoji: ':quora:',
+				text: slackText,
+				blocks: [
+					{
+						type: 'section',
+						text: {
+							type: 'mrkdwn',
+							text: slackText,
+						},
 					},
-				},
-				{
-					type: 'image',
-					image_url: imageChartsUrl,
-					alt_text: 'IT quiz stocks',
-				},
-			],
-		});
+					{
+						type: 'image',
+						image_url: imageChartsUrl,
+						alt_text: 'IT quiz stocks',
+					},
+				],
+			});
 
-		logInfo(`itQuizProgressCronJob: slackMessage = ${JSON.stringify(slackMessage)}`);
+			logInfo(`itQuizProgressCronJob: slackMessage = ${JSON.stringify(slackMessage)}`);
+		}
+
+		{
+			const imageChartsUrl = await getItQuizVideoEngagementsImageUrl(timestamp);
+			logInfo(`itQuizProgressCronJob: imageChartsUrl = ${imageChartsUrl}`);
+
+			const lastYouTubeVideoImpressions = youtubeEngagement[youtubeEngagement.length - 1]?.engagements.impressions || 0;
+			const lastTikTokVideoImpressions = tikTokEngagement[tikTokEngagement.length - 1]?.engagements.impressions || 0;
+			const lastInstagramVideoImpressions = instagramEngagement[instagramEngagement.length - 1]?.engagements.impressions || 0;
+
+			const slackText = [
+				'【前回のITクイズ動画の視聴回数】',
+				`YouTube: ＊${lastYouTubeVideoImpressions}回＊`,
+				`TikTok: ＊${lastTikTokVideoImpressions}回＊`,
+				`Instagram: ＊${lastInstagramVideoImpressions}回＊`,
+			].join('\n');
+
+			const slackMessage = await slack.chat.postMessage({
+				channel: IT_QUIZ_ID,
+				username: 'ITクイズ視聴回数くん',
+				icon_emoji: ':quora:',
+				text: slackText,
+				blocks: [
+					{
+						type: 'section',
+						text: {
+							type: 'mrkdwn',
+							text: slackText,
+						},
+					},
+					{
+						type: 'image',
+						image_url: imageChartsUrl,
+						alt_text: 'IT quiz video impressions',
+					},
+				],
+			});
+
+			logInfo(`itQuizProgressCronJob: slackMessage = ${JSON.stringify(slackMessage)}`);
+		}
 	},
 );
 

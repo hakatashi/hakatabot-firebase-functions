@@ -9,6 +9,22 @@ export interface ItQuizProgressStat {
 	ideas: number,
 }
 
+export interface ItQuizVideoEngagement {
+	volume: string,
+	engagements: {
+		impressions: number,
+		likes: number,
+		comments: number,
+	},
+}
+
+export interface ItQuizVideoEngagementStats {
+	date: string,
+	tiktok: ItQuizVideoEngagement[],
+	youtube: ItQuizVideoEngagement[],
+	instagram: ItQuizVideoEngagement[],
+}
+
 export const db = firebase.firestore();
 export const GoogleTokens = db.collection('google-tokens');
 export const GoogleFoodPhotos = db.collection('google-food-photos');
@@ -20,7 +36,7 @@ export const AnimeWatchRecords = db.collection('anime-watch-records');
 export const ItQuizProgressStats = db.collection('it-quiz-progress-stats') as CollectionReference<ItQuizProgressStat>;
 export const States = db.collection('states');
 export const SteamFriends = db.collection('steam-friends');
-export const ItQuizVideoEngagements = db.collection('it-quiz-video-engagements');
+export const ItQuizVideoEngagements = db.collection('it-quiz-video-engagements') as CollectionReference<ItQuizVideoEngagementStats>;
 
 export class State {
 	doc: DocumentReference;
