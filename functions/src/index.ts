@@ -89,7 +89,7 @@ export const authenticateTikTokApi = onRequest((request, response) => {
 	let scopes = request.query?.scopes;
 
 	if (scopes === undefined) {
-		scopes = ['user.info.stats', 'video.list'];
+		scopes = ['user.info.stats', 'video.list', 'video.publish'];
 	} else if (typeof scopes === 'string') {
 		scopes = scopes.split(',');
 	} else if (!Array.isArray(scopes)) {
