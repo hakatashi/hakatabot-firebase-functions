@@ -39,6 +39,7 @@ export const sleepBattleCronJob = onSchedule(
 	{
 		schedule: '0 12 * * *',
 		timeZone: 'Asia/Tokyo',
+		memory: '512MiB',
 	},
 	async () => {
 		const state = new State('sleep-battle-cron-job');
