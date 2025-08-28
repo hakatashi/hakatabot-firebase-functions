@@ -12,3 +12,5 @@ export const EXPIRATION_WINDOW_IN_SECONDS = 300;
 export const BILLBOARD_HOT100_ID = 'UCP3UgSH9dDuanz7cDAIkHxA.nGzAI5pLbMY';
 export const IT_QUIZ_GOOGLE_SHEET_ID = '1OjcWGGyEdqYBYXSSeF3iOXqHXJJdvcCpfjL22e2zKZU';
 export const IT_QUIZ_YOUTUBE_CHANNEL_ID = 'UCmGXjoj98-4jDsR3ebWMP7A';
+export const SIG_QUIZ_CHANNEL_ID = 'C02DCA8D0DT';
+export const TSG_EVENTS_CALENDAR_ID = 'hl5mthjments725aadepplvcvs@group.calendar.google.com';

@@ -3,13 +3,21 @@ import {createEventAdapter} from '@slack/events-api';
 import {WebClient} from '@slack/web-api';
 import type {WebAPICallResult, MessageAttachment, KnownBlock} from '@slack/web-api';
 import {stripIndents} from 'common-tags';
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone.js';
+import utc from 'dayjs/plugin/utc.js';
 import {info as logInfo} from 'firebase-functions/logger';
 import {defineString} from 'firebase-functions/params';
 import {onRequest} from 'firebase-functions/v2/https';
+import {google} from 'googleapis';
 import range from 'lodash/range.js';
 import shuffle from 'lodash/shuffle.js';
-import {HAKATASHI_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID, TSGBOT_ID} from './const.js';
+import {HAKATASHI_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID, TSGBOT_ID, SIG_QUIZ_CHANNEL_ID, TSG_EVENTS_CALENDAR_ID} from './const.js';
 import {db, State, States} from './firestore.js';
+import {getGoogleAuth} from './google.js';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const pubsubClient = new PubSub();
 
@@ -483,6 +491,95 @@ eventAdapter.on('message', async (message: Message) => {
 		as_user: true,
 		text: getNotificationText(),
 	});
+});
+
+const parseITQuizAnnouncement = (text: string): { hour: number; minute: number; isToday: boolean } | null => {
+	if (!text.includes('ITクイズ') || !text.includes('やります')) {
+		return null;
+	}
+
+	const todayMatch = text.match(/今日(?<hour>\d+)時(?:(?<minute>\d+)分)?から/);
+	if (todayMatch?.groups) {
+		const hour = parseInt(todayMatch.groups.hour);
+		const minute = todayMatch.groups.minute ? parseInt(todayMatch.groups.minute) : 0;
+		return {hour, minute, isToday: true};
+	}
+
+	const tomorrowMatch = text.match(/明日(?<hour>\d+)時(?:(?<minute>\d+)分)?から/);
+	if (tomorrowMatch?.groups) {
+		const hour = parseInt(tomorrowMatch.groups.hour);
+		const minute = tomorrowMatch.groups.minute ? parseInt(tomorrowMatch.groups.minute) : 0;
+		return {hour, minute, isToday: false};
+	}
+
+	return null;
+};
+
+const addITQuizToCalendar = async (hour: number, minute: number, isToday: boolean): Promise<void> => {
+	try {
+		const auth = await getGoogleAuth();
+		const calendar = google.calendar({version: 'v3', auth});
+
+		let eventDate = dayjs().tz('Asia/Tokyo');
+		if (!isToday) {
+			eventDate = eventDate.add(1, 'day');
+		}
+		eventDate = eventDate.hour(hour).minute(minute).second(0).millisecond(0);
+
+		const endTime = eventDate.add(1, 'hour');
+
+		await calendar.events.insert({
+			calendarId: TSG_EVENTS_CALENDAR_ID,
+			requestBody: {
+				summary: 'ITクイズ',
+				description: '博多市が作成したITに関する早押しクイズ30問を、クイズアプリ上で一気に出題します！\n\n出題範囲は「インターネット」「プログラミング」「情報科学」「ソフトウェア」「ハードウェア」「IT企業」などITに少しでも関係ある様々な分野から、そして専門的な内容から一般的な知識まで幅広く出題されます。\n\n時間になると、クイズイベントへの参加リンクがDiscordやSlackの#sig-quizチャンネルなどに投稿されます。\n参加するためには「みんなで早押しクイズ」アプリのインストールが必要になるので、事前に準備しておいてください！',
+				location: 'https://discord.gg/psBT9J5U?event=1345031104888967309',
+				start: {
+					dateTime: eventDate.toISOString(),
+					timeZone: 'Asia/Tokyo',
+				},
+				end: {
+					dateTime: endTime.toISOString(),
+					timeZone: 'Asia/Tokyo',
+				},
+			},
+		});
+
+		logInfo(`ITクイズの予定を追加しました: ${eventDate.toISOString()}`);
+	} catch (error) {
+		logInfo(`ITクイズの予定追加に失敗しました: ${error}`);
+		throw error;
+	}
+};
+
+eventAdapter.on('message', async (message: Message) => {
+	if (
+		message.channel === SIG_QUIZ_CHANNEL_ID &&
+		message.user === HAKATASHI_ID &&
+		message.subtype !== 'bot_message' &&
+		typeof message.bot_id !== 'string' &&
+		!message.hidden &&
+		message.text
+	) {
+		const quizInfo = parseITQuizAnnouncement(message.text);
+		if (quizInfo) {
+			try {
+				await addITQuizToCalendar(quizInfo.hour, quizInfo.minute, quizInfo.isToday);
+
+				await slack.reactions.add({
+					channel: message.channel,
+					timestamp: message.ts,
+					name: 'calendar',
+				});
+			} catch {
+				await slack.reactions.add({
+					channel: message.channel,
+					timestamp: message.ts,
+					name: 'x',
+				});
+			}
+		}
+	}
 });
 
 // What's wrong?
