@@ -11,7 +11,7 @@ export default [
 			},
 		},
 		plugins: {
-			canonical, 
+			canonical,
 		},
 		rules: {
 			'no-dupe-class-members': 'off',
@@ -19,6 +19,7 @@ export default [
 			'import/no-namespace': 'off',
 			'canonical/require-extension': 'error',
 			'@typescript-eslint/no-explicit-any': 'warn',
+			'import/no-named-as-default-member': 'off',
 		},
 	},
 ];
