@@ -77,6 +77,7 @@ export interface GetMessagesResult extends WebAPICallResult {
 
 const SLACK_TOKEN = defineString('SLACK_TOKEN');
 const SLACK_SIGNING_SECRET = defineString('SLACK_SIGNING_SECRET');
+const IT_QUIZ_DISCORD_EVENT_URL = defineString('IT_QUIZ_DISCORD_EVENT_URL');
 
 const slack = new WebClient(SLACK_TOKEN.value());
 const eventAdapter = createEventAdapter(SLACK_SIGNING_SECRET.value(), {waitForResponse: true});
@@ -533,7 +534,7 @@ const addITQuizToCalendar = async (hour: number, minute: number, isToday: boolea
 			requestBody: {
 				summary: 'ITクイズ',
 				description: '博多市が作成したITに関する早押しクイズ30問を、クイズアプリ上で一気に出題します！\n\n出題範囲は「インターネット」「プログラミング」「情報科学」「ソフトウェア」「ハードウェア」「IT企業」などITに少しでも関係ある様々な分野から、そして専門的な内容から一般的な知識まで幅広く出題されます。\n\n時間になると、クイズイベントへの参加リンクがDiscordやSlackの#sig-quizチャンネルなどに投稿されます。\n参加するためには「みんなで早押しクイズ」アプリのインストールが必要になるので、事前に準備しておいてください！',
-				location: 'https://discord.gg/psBT9J5U?event=1345031104888967309',
+				location: IT_QUIZ_DISCORD_EVENT_URL.value(),
 				start: {
 					dateTime: eventDate.toISOString(),
 					timeZone: 'Asia/Tokyo',
