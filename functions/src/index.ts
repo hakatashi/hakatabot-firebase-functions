@@ -21,6 +21,7 @@ export const authenticateGoogleApi = onRequest((request, response) => {
 			'https://www.googleapis.com/auth/userinfo.profile',
 			'https://www.googleapis.com/auth/youtube.readonly',
 			'https://www.googleapis.com/auth/spreadsheets.readonly',
+			'https://www.googleapis.com/auth/calendar',
 		],
 	});
 	response.redirect(url);
