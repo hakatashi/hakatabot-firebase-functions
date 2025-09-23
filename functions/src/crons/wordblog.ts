@@ -271,6 +271,7 @@ export const updateWordBlog = onSchedule(
 		timeoutSeconds: 120,
 		schedule: '0 10 * * *',
 		timeZone: 'Asia/Tokyo',
+		memory: '512MiB',
 	},
 	updateWordBlogFunction,
 );
