@@ -14,7 +14,7 @@ import {webClient as slack} from '../slack.js';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-export const sleepGetCronJob = onSchedule('every 15 minutes', async (event) => {
+export const sleepGetCronJob = onSchedule({schedule: 'every 15 minutes', memory: '512MiB'}, async (event) => {
 	logInfo('Getting fitbit activities...');
 
 	const res = await fitbitGet('/1.2/user/-/sleep/list.json', {

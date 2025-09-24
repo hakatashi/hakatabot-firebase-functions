@@ -13,7 +13,7 @@ import {webClient as slack} from '../slack.js';
 
 const API_TOKEN = defineString('API_TOKEN');
 
-export const updateSocialPost = onRequest(async (request, response) => {
+export const updateSocialPost = onRequest({memory: '512MiB'}, async (request, response) => {
 	logInfo('updateSocialPost started');
 
 	if (request.method !== 'POST') {

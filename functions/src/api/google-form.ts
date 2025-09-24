@@ -5,7 +5,7 @@ import {onRequest} from 'firebase-functions/v2/https';
 
 const API_TOKEN = defineString('API_TOKEN');
 
-export const googleFormLlmBenchmarkSubmission = onRequest(async (request, response) => {
+export const googleFormLlmBenchmarkSubmission = onRequest({memory: '512MiB'}, async (request, response) => {
 	logInfo('googleFormLlmBenchmarkSubmission started');
 	logInfo(`method: ${request.method}`);
 
