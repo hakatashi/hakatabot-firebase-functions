@@ -9,7 +9,7 @@ import {AnimeWatchRecords, FitbitActivities} from '../firestore.js';
 import {get} from '../fitbit.js';
 import {webClient as slack} from '../slack.js';
 
-export const exerciseGetCronJob = onSchedule('every 15 minutes', async (event) => {
+export const exerciseGetCronJob = onSchedule({schedule: 'every 15 minutes', memory: '512MiB'}, async (event) => {
 	logInfo('Getting fitbit activities...');
 	const res = await get('/1/user/-/activities/list.json', {
 		afterDate: '1970-01-01',

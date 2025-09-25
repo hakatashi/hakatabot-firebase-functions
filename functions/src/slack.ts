@@ -593,7 +593,7 @@ eventAdapter.constructor.prototype.emit = async function (eventName: string, eve
 
 const requestListener = eventAdapter.requestListener();
 
-export const slackEvent = onRequest((request, response) => {
+export const slackEvent = onRequest({memory: '512MiB'}, (request, response) => {
 	if (request.headers['x-slack-retry-num']) {
 		logInfo(`Ignoring Slack retry message: ${request.headers['x-slack-retry-num']}`);
 		response.status(202).send('OK');
