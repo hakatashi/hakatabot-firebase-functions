@@ -389,11 +389,10 @@ eventAdapter.on('message', async (message: Message) => {
 
 	const inputDialog = doc.get('inputDialog') as string ?? '';
 	const outputSpeech = doc.get('outputSpeech') as string ?? '';
-	const output = doc.get('output') as string ?? '';
 	const character = doc.get('character') as string ?? '';
 	const moderations = resultDocs.map((resultDoc) => resultDoc.get('moderations') as Moderations ?? {});
+	const config = doc.get('config') as Record<string, unknown> ?? {};
 
-	const tailText = output.split('」').slice(1).join('」');
 	let text = stripIndents`
 		Input:
 		\`\`\`
@@ -402,10 +401,6 @@ eventAdapter.on('message', async (message: Message) => {
 		Result:
 		\`\`\`
 		${character}「${outputSpeech.trim()}」
-		\`\`\`
-		Continuation Text:
-		\`\`\`
-		${tailText.trim()}
 		\`\`\`
 	`;
 
@@ -433,6 +428,10 @@ eventAdapter.on('message', async (message: Message) => {
 				'```',
 			].join('\n');
 		}
+	}
+
+	if (typeof config.thinking_text === 'string') {
+		text += `\nThinking Text:\n\`\`\`\n${config.thinking_text}\n\`\`\``;
 	}
 
 	await slack.chat.postMessage({
