@@ -38,7 +38,7 @@
     "lodash": "^4.17.21",
     "ml-regression-multivariate-linear": "^2.0.4",
     "oauth": "^0.10.2",
-    "scrape-it": "^6.1.11",
+    "scrape-it": "^6.1.12",
     "simple-oauth2": "^5.1.0",
     "tinycolor2": "^1.6.0"
   },
