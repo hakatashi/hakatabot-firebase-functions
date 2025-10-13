@@ -47,6 +47,7 @@ interface Entry {
 	ruby: string,
 	descriptions: string[],
 	cite: string,
+	origin: string,
 }
 
 const github = new Octokit({
@@ -92,6 +93,7 @@ const updateWordBlogFunction = async (context: ScheduledEvent) => {
 		let ruby = '';
 		let descriptions: string[] = [];
 		let cite = '';
+		let origin = '';
 		for (const line of data.lines) {
 			const indents = line.text.match(/^[ \t]*/)![0] || '';
 			const indentLevel = indents.length;
@@ -103,10 +105,11 @@ const updateWordBlogFunction = async (context: ScheduledEvent) => {
 
 			if (indentLevel === 1) {
 				if (word !== '') {
-					entries.push({word, ruby, descriptions, cite});
+					entries.push({word, ruby, descriptions, cite, origin});
 					ruby = '';
 					descriptions = [];
 					cite = '';
+					origin = '';
 				}
 
 				const tokens = text.split(/[()（）)]/);
@@ -123,11 +126,16 @@ const updateWordBlogFunction = async (context: ScheduledEvent) => {
 				continue;
 			}
 
+			if (tokens[0] === 'origin' && tokens[1]) {
+				origin = tokens[1].trim();
+				continue;
+			}
+
 			descriptions.push('    '.repeat(indentLevel - 2) + text);
 		}
 
 		if (word !== '') {
-			entries.push({word, ruby, descriptions, cite});
+			entries.push({word, ruby, descriptions, cite, origin});
 		}
 	}
 
@@ -178,6 +186,7 @@ const updateWordBlogFunction = async (context: ScheduledEvent) => {
 		...entry.descriptions,
 		'',
 		getCite(entry.cite, entry.word),
+		...(entry.origin ? ['', `収集元: ${entry.origin}`] : []),
 	];
 
 	logInfo(`File to post: ${JSON.stringify(lines)}`);
