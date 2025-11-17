@@ -24,7 +24,7 @@
     "@slack/web-api": "^7.12.0",
     "@slack/webhook": "^7.0.6",
     "@threadsjs/threads.js": "^1.9.0",
-    "@unicode/unicode-14.0.0": "^1.6.12",
+    "@unicode/unicode-14.0.0": "^1.6.16",
     "axios": "^1.13.2",
     "cheerio": "^1.0.0",
     "cloudinary": "^2.8.0",
