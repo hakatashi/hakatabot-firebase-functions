@@ -21,7 +21,7 @@
     "@google-cloud/pubsub": "^5.2.0",
     "@octokit/rest": "^22.0.1",
     "@slack/events-api": "^3.0.1",
-    "@slack/web-api": "^7.12.0",
+    "@slack/web-api": "^7.13.0",
     "@slack/webhook": "^7.0.6",
     "@threadsjs/threads.js": "^1.9.0",
     "@unicode/unicode-14.0.0": "^1.6.16",
