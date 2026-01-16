@@ -27,7 +27,7 @@
     "@unicode/unicode-14.0.0": "^1.6.16",
     "axios": "^1.13.2",
     "cheerio": "^1.0.0",
-    "cloudinary": "^2.8.0",
+    "cloudinary": "^2.9.0",
     "common-tags": "^1.8.2",
     "dayjs": "^1.11.19",
     "download": "^8.0.0",
