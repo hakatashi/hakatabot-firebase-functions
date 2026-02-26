@@ -33,7 +33,7 @@
     "download": "^8.0.0",
     "emoji-data": "^0.2.0",
     "firebase-admin": "^13.6.1",
-    "firebase-functions": "^7.0.5",
+    "firebase-functions": "^7.0.6",
     "googleapis": "^171.4.0",
     "lodash": "^4.17.23",
     "ml-regression-multivariate-linear": "^2.0.4",
