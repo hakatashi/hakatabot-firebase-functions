@@ -22,7 +22,7 @@
     "jest": "^30.3.0",
     "jest-when": "^3.7.0",
     "ts-jest": "^29.4.9",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.2"
   },
   "scripts": {
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --passWithNoTests",
