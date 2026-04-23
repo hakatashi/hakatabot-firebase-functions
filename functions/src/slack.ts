@@ -135,6 +135,21 @@ eventAdapter.on('message', async (message: Message) => {
 	}
 });
 
+// Rinna temperature signal
+eventAdapter.on('message', async (message: Message) => {
+	if (message.text === 'うなの体温') {
+		await pubsubClient
+			.topic('hakatabot')
+			.publishMessage({
+				data: Buffer.from(JSON.stringify({
+					type: 'rinna-temperature',
+					ts: message.ts,
+					channel: message.channel,
+				})),
+			});
+	}
+});
+
 // No-Events canceller
 eventAdapter.on('message', async (message: Message) => {
 	if (
