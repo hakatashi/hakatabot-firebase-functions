@@ -151,15 +151,21 @@ const slackMastodonTunnel = async (event: ReactionAddedEvent) => {
 
 	// conversations.replies has a tight Slack rate limit, so this goes
 	// through the slack-patron caching proxy instead of the Web API client.
-	// ts can be either a thread's parent ts or a reply's ts; Slack resolves
-	// either to the same full thread, so this also gives us every message
-	// we need to look up a self-reply target below.
-	const threadMessages = await getThreadMessages(event.item.channel, event.item.ts);
-	const message = threadMessages.find((candidate) => candidate.ts === event.item.ts);
+	// Unlike the raw Slack API, slack-patron's proxy only resolves the full
+	// thread when ts is the thread's parent -- passing a reply's own ts
+	// returns just that single message. So fetch the reacted message first,
+	// and if it turns out to be a reply, re-fetch using its thread_ts to get
+	// every message needed to look up a self-reply target below.
+	const initialMessages = await getThreadMessages(event.item.channel, event.item.ts);
+	const message = initialMessages.find((candidate) => candidate.ts === event.item.ts);
 
 	if (!message) {
 		return;
 	}
+
+	const threadMessages = (typeof message.thread_ts === 'string' && message.thread_ts !== message.ts)
+		? await getThreadMessages(event.item.channel, message.thread_ts)
+		: initialMessages;
 
 	const urls: string[] = [];
 
