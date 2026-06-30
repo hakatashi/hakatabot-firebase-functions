@@ -41,7 +41,7 @@ interface Image {
 	format: string,
 }
 
-export const postMastodon = async (text: string, images: Image[] = []) => {
+export const postMastodon = async (text: string, images: Image[] = [], inReplyToId?: string) => {
 	const mediaIds: string[] = [];
 
 	const escapedText = htmlEscape(text).replaceAll('\n', '<br>');
@@ -68,6 +68,7 @@ export const postMastodon = async (text: string, images: Image[] = []) => {
 		status: escapedText,
 		visibility: 'public',
 		media_ids: mediaIds,
+		...(inReplyToId ? {in_reply_to_id: inReplyToId} : {}),
 	}), {
 		headers: {
 			Authorization: `Bearer ${MASTODON_ACCESS_TOKEN.value()}`,

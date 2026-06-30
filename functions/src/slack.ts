@@ -1,3 +1,4 @@
+import path from 'node:path';
 import {PubSub} from '@google-cloud/pubsub';
 import {createEventAdapter} from '@slack/events-api';
 import {WebClient} from '@slack/web-api';
@@ -6,15 +7,19 @@ import {stripIndents} from 'common-tags';
 import dayjs from 'dayjs';
 import timezone from 'dayjs/plugin/timezone.js';
 import utc from 'dayjs/plugin/utc.js';
-import {info as logInfo} from 'firebase-functions/logger';
+import download from 'download';
+import {Timestamp} from 'firebase-admin/firestore';
+import {info as logInfo, error as logError} from 'firebase-functions/logger';
 import {defineString} from 'firebase-functions/params';
 import {onRequest} from 'firebase-functions/v2/https';
 import {google} from 'googleapis';
 import range from 'lodash/range.js';
 import shuffle from 'lodash/shuffle.js';
 import {HAKATASHI_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID, TSGBOT_ID, SIG_QUIZ_CHANNEL_ID, TSG_EVENTS_CALENDAR_ID} from './const.js';
-import {db, State, States} from './firestore.js';
+import {postMastodon} from './crons/lib/social.js';
+import {db, MastodonPosts, State, States} from './firestore.js';
 import {getGoogleAuth} from './google.js';
+import {getThreadMessages} from './slack-patron.js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -108,9 +113,130 @@ const letterpackBomb = async (event: ReactionAddedEvent) => {
 	)));
 };
 
+const unescapeSlackComponent = (text: string) => (
+	text
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&amp;/g, '&')
+);
+
+// Finds the most recent already-crossposted message among threadMessages
+// that precedes beforeTs, so a reply can be posted as a Mastodon self-reply
+// and preserve the thread's chronological chain.
+const findMastodonReplyTarget = async (threadMessages: Message[], beforeTs: string): Promise<string | null> => {
+	const candidates = threadMessages
+		.filter((candidate) => parseFloat(candidate.ts) < parseFloat(beforeTs))
+		.sort((a, b) => parseFloat(b.ts) - parseFloat(a.ts));
+
+	for (const candidate of candidates) {
+		const post = await MastodonPosts.doc(candidate.ts).get();
+		const statusId = post.data()?.statusId;
+		if (statusId !== undefined) {
+			return statusId;
+		}
+	}
+
+	return null;
+};
+
+// Slack-Mastodon tunnel
+const slackMastodonTunnel = async (event: ReactionAddedEvent) => {
+	if (event.reaction !== 'red_large_square') {
+		return;
+	}
+
+	if (!(event.user === HAKATASHI_ID && event.item_user === HAKATASHI_ID)) {
+		return;
+	}
+
+	// conversations.replies has a tight Slack rate limit, so this goes
+	// through the slack-patron caching proxy instead of the Web API client.
+	// ts can be either a thread's parent ts or a reply's ts; Slack resolves
+	// either to the same full thread, so this also gives us every message
+	// we need to look up a self-reply target below.
+	const threadMessages = await getThreadMessages(event.item.channel, event.item.ts);
+	const message = threadMessages.find((candidate) => candidate.ts === event.item.ts);
+
+	if (!message) {
+		return;
+	}
+
+	const urls: string[] = [];
+
+	for (const file of message.files ?? []) {
+		if (file.mimetype.startsWith('image/')) {
+			urls.push(file.url_private);
+		}
+	}
+
+	const usedUrls = new Set<string>();
+	for (const attachment of message.attachments ?? []) {
+		if (attachment.image_url && attachment.service_name === 'Gyazo') {
+			urls.push(attachment.image_url);
+			if (attachment.original_url) {
+				usedUrls.add(attachment.original_url);
+			}
+		}
+	}
+
+	const images: {data: Buffer, format: string}[] = [];
+	for (const url of urls.slice(0, 4)) {
+		const {hostname, pathname} = new URL(url);
+		const imageData = await download(url, undefined, {
+			headers: {
+				...(hostname === 'files.slack.com' ? {Authorization: `Bearer ${SLACK_TOKEN.value()}`} : {}),
+			},
+		});
+		images.push({
+			data: imageData,
+			format: path.extname(pathname).slice(1),
+		});
+	}
+
+	// Unescape
+	let text = message.text.replace(/<(?<component>.+?)>/g, (_match, component) => {
+		const [info, displayText] = component.split('|');
+		if ((/^[@#!]/).test(info)) {
+			return '';
+		}
+		if (usedUrls.has(unescapeSlackComponent(info))) {
+			return '';
+		}
+		if (displayText) {
+			return displayText;
+		}
+		return info;
+	});
+	text = unescapeSlackComponent(text).trim();
+
+	let inReplyToId: string | undefined;
+	if (typeof message.thread_ts === 'string' && message.thread_ts !== message.ts) {
+		const target = await findMastodonReplyTarget(threadMessages, message.ts);
+		if (target !== null) {
+			inReplyToId = target;
+		}
+	}
+
+	try {
+		const data = await postMastodon(text, images, inReplyToId);
+		logInfo(`Posted Mastodon status ${data.id} for Slack message ${message.ts}`);
+
+		await MastodonPosts.doc(message.ts).set({
+			statusId: data.id,
+			url: data.url,
+			channel: event.item.channel,
+			threadTs: message.thread_ts ?? null,
+			postedAt: Timestamp.now(),
+		});
+	} catch (error) {
+		logError(`Failed to post Mastodon status: ${error}`);
+	}
+};
+
 eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
 	if (event.item.type === 'message') {
 		await letterpackBomb(event);
+		await slackMastodonTunnel(event);
 	}
 });
 
