@@ -20,7 +20,7 @@
     "firebase-functions-test": "^3.5.0",
     "globals": "^17.7.0",
     "jest": "^30.4.2",
-    "jest-when": "^3.7.0",
+    "jest-when": "^4.0.3",
     "ts-jest": "^29.4.11",
     "typescript": "^5.9.3"
   },
