@@ -12,7 +12,7 @@ export * from './api/index.js';
 
 const oauth2 = google.oauth2('v2');
 
-export const authenticateGoogleApi = onRequest((request, response) => {
+export const authenticateGoogleApi = onRequest({memory: '512MiB'}, (request, response) => {
 	const url = oauth2Client.generateAuthUrl({
 		access_type: 'offline',
 		scope: [
@@ -27,7 +27,7 @@ export const authenticateGoogleApi = onRequest((request, response) => {
 	response.redirect(url);
 });
 
-export const googleApiOauthCallback = onRequest(async (request, response) => {
+export const googleApiOauthCallback = onRequest({memory: '512MiB'}, async (request, response) => {
 	const code = request.query?.code;
 	if (!code || typeof code !== 'string') {
 		response.sendStatus(400).end();
@@ -48,7 +48,7 @@ export const googleApiOauthCallback = onRequest(async (request, response) => {
 	response.send('ok');
 });
 
-export const authenticateFitbitApi = onRequest((request, response) => {
+export const authenticateFitbitApi = onRequest({memory: '512MiB'}, (request, response) => {
 	let scopes = request.query?.scopes;
 
 	if (scopes === undefined) {
@@ -68,7 +68,7 @@ export const authenticateFitbitApi = onRequest((request, response) => {
 	response.redirect(authorizationUri);
 });
 
-export const fitbitApiOauthCallback = onRequest(async (request, response) => {
+export const fitbitApiOauthCallback = onRequest({memory: '512MiB'}, async (request, response) => {
 	const code = request.query?.code;
 	if (!code || typeof code !== 'string') {
 		response.sendStatus(400).end();
@@ -86,7 +86,7 @@ export const fitbitApiOauthCallback = onRequest(async (request, response) => {
 	response.send('ok');
 });
 
-export const authenticateTikTokApi = onRequest((request, response) => {
+export const authenticateTikTokApi = onRequest({memory: '512MiB'}, (request, response) => {
 	let scopes = request.query?.scopes;
 
 	if (scopes === undefined) {
@@ -104,7 +104,7 @@ export const authenticateTikTokApi = onRequest((request, response) => {
 	response.redirect(authorizationUri);
 });
 
-export const tiktokApiOauthCallback = onRequest(async (request, response) => {
+export const tiktokApiOauthCallback = onRequest({memory: '512MiB'}, async (request, response) => {
 	try {
 		const code = request.query?.code;
 		const error = request.query?.error;
@@ -140,7 +140,7 @@ export const tiktokApiOauthCallback = onRequest(async (request, response) => {
 	}
 });
 
-export const recordAnimeWatchRecord = onRequest(async (request, response) => {
+export const recordAnimeWatchRecord = onRequest({memory: '512MiB'}, async (request, response) => {
 	if (!request.body || typeof request.body !== 'object') {
 		response.sendStatus(400).end();
 		return;

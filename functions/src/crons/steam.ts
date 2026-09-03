@@ -34,7 +34,10 @@ interface GetPlayerSummariesResponse {
 	};
 }
 
-export const updateSteamFriendsCronJob = onSchedule('every 5 minutes', async () => {
+export const updateSteamFriendsCronJob = onSchedule({
+	schedule: 'every 5 minutes',
+	memory: '512MiB',
+}, async () => {
 	logInfo('updateSteamFriendsCronJob started');
 
 	const {data: friends} = await axios<GetFriendListResponse>('https://api.steampowered.com/ISteamUser/GetFriendList/v1', {
