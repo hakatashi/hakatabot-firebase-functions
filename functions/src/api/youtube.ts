@@ -7,7 +7,7 @@ import {getGoogleAuth} from '../google.js';
 // initialize the Youtube API library
 const youtube = google.youtube('v3');
 
-export const latestBillboardJapanHot100 = onRequest(async (request, response) => {
+export const latestBillboardJapanHot100 = onRequest({memory: '512MiB'}, async (request, response) => {
 	const auth = await getGoogleAuth();
 	const data = await youtube.channelSections.list({
 		id: [BILLBOARD_HOT100_ID],

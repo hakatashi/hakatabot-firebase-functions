@@ -68,3 +68,7 @@ node_modules/
 db
 
 google-application-credentials.json
+
+# Claude Code (individual developer settings/notes, not shared)
+CLAUDE.local.md
+.claude/settings.local.json

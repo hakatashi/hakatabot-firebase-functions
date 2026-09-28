@@ -4,7 +4,7 @@ import get from 'lodash/get.js';
 import last from 'lodash/last.js';
 import {get as fitbitGet} from '../fitbit.js';
 
-export const fitbitLatestHeartBeatRate = onRequest(async (request, response) => {
+export const fitbitLatestHeartBeatRate = onRequest({memory: '512MiB'}, async (request, response) => {
 	logInfo('Getting fitbit heart rate history...');
 	const res = await fitbitGet('/1/user/-/activities/heart/date/today/1d/5min.json', {});
 

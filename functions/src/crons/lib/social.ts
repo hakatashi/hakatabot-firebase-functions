@@ -27,24 +27,13 @@ const imageFormatToMimeType = (format: string) => {
 	return null;
 };
 
-const htmlEscape = (text: string) => (
-	text
-		.replaceAll('&', '&amp;')
-		.replaceAll('<', '&lt;')
-		.replaceAll('>', '&gt;')
-		.replaceAll('"', '&quot;')
-		.replaceAll('\'', '&#39;')
-);
-
 interface Image {
 	data: Buffer,
 	format: string,
 }
 
-export const postMastodon = async (text: string, images: Image[] = []) => {
+export const postMastodon = async (text: string, images: Image[] = [], inReplyToId?: string) => {
 	const mediaIds: string[] = [];
-
-	const escapedText = htmlEscape(text).replaceAll('\n', '<br>');
 
 	for (const image of images) {
 		const formData = new FormData();
@@ -65,9 +54,10 @@ export const postMastodon = async (text: string, images: Image[] = []) => {
 	}
 
 	const res = await axios.post(`https://${MASTODON_HOSTNAME.value()}/api/v1/statuses`, JSON.stringify({
-		status: escapedText,
+		status: text,
 		visibility: 'public',
 		media_ids: mediaIds,
+		...(inReplyToId ? {in_reply_to_id: inReplyToId} : {}),
 	}), {
 		headers: {
 			Authorization: `Bearer ${MASTODON_ACCESS_TOKEN.value()}`,

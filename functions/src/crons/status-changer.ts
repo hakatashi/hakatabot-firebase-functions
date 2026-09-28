@@ -1,4 +1,4 @@
-import unicodeNames from '@unicode/unicode-14.0.0/Names/index.js';
+import unicodeNames from '@unicode/unicode-14.0.0/Names/index.mjs';
 import download from 'download';
 import emojiData from 'emoji-data';
 import {info as logInfo} from 'firebase-functions/logger';
@@ -46,7 +46,10 @@ const unicodes = [...unicodeNames.entries()].filter(([codepoint, name]) => {
 	return true;
 });
 
-export const updateSlackStatusesCronJob = onSchedule('every 10 minutes', async () => {
+export const updateSlackStatusesCronJob = onSchedule({
+	schedule: 'every 10 minutes',
+	memory: '512MiB',
+}, async () => {
 	logInfo('updateSlackStatusesCronJob started');
 
 	const tweetsBuffer = await download(URLS_TWEETS_JSON.value());
