@@ -12,9 +12,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
       - name: Install Dependencies
-        run: npm install
+        run: |
+          npm ci --ignore-scripts
+          npm ci --prefix functions
       - name: Run test
         run: npm test
   lint:
@@ -26,9 +32,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
       - name: Install Dependencies
-        run: npm install
+        run: |
+          npm ci --ignore-scripts
+          npm ci --prefix functions
       - name: Run lint
         run: npm run lint
       - name: Run TypeScript Check
@@ -46,9 +58,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
       - name: Install Dependencies
-        run: npm install
+        run: |
+          npm ci --ignore-scripts
+          npm ci --prefix functions
       - name: Restore .env file from secrets
         run: echo "${{secrets.FUNCTIONS_DOTENV}}" > functions/.env
       - name: Deploy to Firebase

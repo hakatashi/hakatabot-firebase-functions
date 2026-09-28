@@ -21,7 +21,7 @@ describe('getWaka', () => {
 	});
 
 	it('should return the correct result', async () => {
-		when<Promise<Buffer>, [string]>(download)
+		when(download)
 			.calledWith('https://ja.wikisource.org/w/api.php?format=json&action=query&prop=revisions&rvprop=content&titles=%E5%8F%A4%E4%BB%8A%E5%92%8C%E6%AD%8C%E9%9B%86')
 			.mockResolvedValue(Buffer.from(JSON.stringify({
 				query: {
@@ -44,7 +44,7 @@ describe('getWaka', () => {
 				},
 			})));
 
-		when<Promise<Buffer>, [string]>(download)
+		when(download)
 			.calledWith('https://ja.wikisource.org/w/api.php?format=json&action=query&prop=revisions&rvprop=content&titles=%E5%8F%A4%E4%BB%8A%E5%92%8C%E6%AD%8C%E9%9B%86%2F%E5%B7%BB%E4%B8%80')
 			.mockResolvedValue(Buffer.from(JSON.stringify({
 				query: {
