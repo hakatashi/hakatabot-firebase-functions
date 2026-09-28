@@ -13,3 +13,4 @@ node_modules/
 
 # Runtime configs which includes secrets
 .runtimeconfig.json
+.env.*

@@ -9,5 +9,10 @@ service cloud.firestore {
       allow create: if true;
       allow get, update, delete: if false;
     }
+
+    match /rhythm-game-play-records/{record} {
+      allow create, update: if true;
+      allow get, delete: if false;
+    }
   }
 }

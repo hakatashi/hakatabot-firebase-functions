@@ -1,15 +1,17 @@
 import axios from 'axios';
-import {config as getConfig, logger} from 'firebase-functions';
+import {info as logInfo} from 'firebase-functions/logger';
+import {defineString} from 'firebase-functions/params';
 import {AuthorizationCode} from 'simple-oauth2';
 import {EXPIRATION_WINDOW_IN_SECONDS, HAKATASHI_FITBIT_ID} from './const.js';
 import {FitbitTokens} from './firestore.js';
 
-const config = getConfig();
+const FITBIT_CLIENT_ID = defineString('FITBIT_CLIENT_ID');
+const FITBIT_CLIENT_SECRET = defineString('FITBIT_CLIENT_SECRET');
 
 export const client = new AuthorizationCode({
 	client: {
-		id: config.fitbit.client_id,
-		secret: config.fitbit.client_secret,
+		id: FITBIT_CLIENT_ID.value(),
+		secret: FITBIT_CLIENT_SECRET.value(),
 	},
 	auth: {
 		tokenHost: 'https://api.fitbit.com',
@@ -32,7 +34,7 @@ export const get = async (path: string, params: any, userId: string = HAKATASHI_
 	let accessToken = client.createToken(hakatashiTokens as any);
 
 	if (accessToken.expired(EXPIRATION_WINDOW_IN_SECONDS)) {
-		logger.info('Refreshing token...');
+		logInfo('Refreshing token...');
 		accessToken = await accessToken.refresh();
 		await FitbitTokens.doc(userId).set(accessToken.token, {merge: true});
 	}

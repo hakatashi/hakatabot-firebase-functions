@@ -1,13 +1,28 @@
+import path from 'node:path';
 import {PubSub} from '@google-cloud/pubsub';
 import {createEventAdapter} from '@slack/events-api';
 import {WebClient} from '@slack/web-api';
 import type {WebAPICallResult, MessageAttachment, KnownBlock} from '@slack/web-api';
 import {stripIndents} from 'common-tags';
-import {https, logger, config as getConfig} from 'firebase-functions';
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone.js';
+import utc from 'dayjs/plugin/utc.js';
+import download from 'download';
+import {Timestamp} from 'firebase-admin/firestore';
+import {info as logInfo, error as logError} from 'firebase-functions/logger';
+import {defineString} from 'firebase-functions/params';
+import {onRequest} from 'firebase-functions/v2/https';
+import {google} from 'googleapis';
 import range from 'lodash/range.js';
 import shuffle from 'lodash/shuffle.js';
-import {HAKATASHI_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID, TSGBOT_ID} from './const.js';
-import {db, State, States} from './firestore.js';
+import {HAKATASHI_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID, TSGBOT_ID, SIG_QUIZ_CHANNEL_ID, TSG_EVENTS_CALENDAR_ID, MINECRAFT_LOG_CHANNEL_ID} from './const.js';
+import {postMastodon} from './crons/lib/social.js';
+import {db, MastodonPosts, State, States} from './firestore.js';
+import {getGoogleAuth} from './google.js';
+import {getThreadMessages} from './slack-patron.js';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const pubsubClient = new PubSub();
 
@@ -65,10 +80,12 @@ export interface GetMessagesResult extends WebAPICallResult {
 	messages: Message[],
 }
 
-const config = getConfig();
+const SLACK_TOKEN = defineString('SLACK_TOKEN');
+const SLACK_SIGNING_SECRET = defineString('SLACK_SIGNING_SECRET');
+const IT_QUIZ_DISCORD_EVENT_URL = defineString('IT_QUIZ_DISCORD_EVENT_URL');
 
-const slack = new WebClient(config.slack.token);
-const eventAdapter = createEventAdapter(config.slack.signing_secret, {waitForResponse: true});
+const slack = new WebClient(SLACK_TOKEN.value());
+const eventAdapter = createEventAdapter(SLACK_SIGNING_SECRET.value(), {waitForResponse: true});
 
 const letterpackEmojis = [
 	...range(19).map((i) => `letterpack-${i}`),
@@ -96,9 +113,136 @@ const letterpackBomb = async (event: ReactionAddedEvent) => {
 	)));
 };
 
+const unescapeSlackComponent = (text: string) => (
+	text
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&amp;/g, '&')
+);
+
+// Finds the most recent already-crossposted message among threadMessages
+// that precedes beforeTs, so a reply can be posted as a Mastodon self-reply
+// and preserve the thread's chronological chain.
+const findMastodonReplyTarget = async (threadMessages: Message[], beforeTs: string): Promise<string | null> => {
+	const candidates = threadMessages
+		.filter((candidate) => parseFloat(candidate.ts) < parseFloat(beforeTs))
+		.sort((a, b) => parseFloat(b.ts) - parseFloat(a.ts));
+
+	for (const candidate of candidates) {
+		const post = await MastodonPosts.doc(candidate.ts).get();
+		const statusId = post.data()?.statusId;
+		if (statusId !== undefined) {
+			return statusId;
+		}
+	}
+
+	return null;
+};
+
+// Slack-Mastodon tunnel
+const slackMastodonTunnel = async (event: ReactionAddedEvent) => {
+	if (event.reaction !== 'red_large_square') {
+		return;
+	}
+
+	if (!(event.user === HAKATASHI_ID && event.item_user === HAKATASHI_ID)) {
+		return;
+	}
+
+	// conversations.replies has a tight Slack rate limit, so this goes
+	// through the slack-patron caching proxy instead of the Web API client.
+	// Unlike the raw Slack API, slack-patron's proxy only resolves the full
+	// thread when ts is the thread's parent -- passing a reply's own ts
+	// returns just that single message. So fetch the reacted message first,
+	// and if it turns out to be a reply, re-fetch using its thread_ts to get
+	// every message needed to look up a self-reply target below.
+	const initialMessages = await getThreadMessages(event.item.channel, event.item.ts);
+	const message = initialMessages.find((candidate) => candidate.ts === event.item.ts);
+
+	if (!message) {
+		return;
+	}
+
+	const threadMessages = (typeof message.thread_ts === 'string' && message.thread_ts !== message.ts)
+		? await getThreadMessages(event.item.channel, message.thread_ts)
+		: initialMessages;
+
+	const urls: string[] = [];
+
+	for (const file of message.files ?? []) {
+		if (file.mimetype.startsWith('image/')) {
+			urls.push(file.url_private);
+		}
+	}
+
+	const usedUrls = new Set<string>();
+	for (const attachment of message.attachments ?? []) {
+		if (attachment.image_url && attachment.service_name === 'Gyazo') {
+			urls.push(attachment.image_url);
+			if (attachment.original_url) {
+				usedUrls.add(attachment.original_url);
+			}
+		}
+	}
+
+	const images: {data: Buffer, format: string}[] = [];
+	for (const url of urls.slice(0, 4)) {
+		const {hostname, pathname} = new URL(url);
+		const imageData = await download(url, undefined, {
+			headers: {
+				...(hostname === 'files.slack.com' ? {Authorization: `Bearer ${SLACK_TOKEN.value()}`} : {}),
+			},
+		});
+		images.push({
+			data: imageData,
+			format: path.extname(pathname).slice(1),
+		});
+	}
+
+	// Unescape
+	let text = message.text.replace(/<(?<component>.+?)>/g, (_match, component) => {
+		const [info, displayText] = component.split('|');
+		if ((/^[@#!]/).test(info)) {
+			return '';
+		}
+		if (usedUrls.has(unescapeSlackComponent(info))) {
+			return '';
+		}
+		if (displayText) {
+			return displayText;
+		}
+		return info;
+	});
+	text = unescapeSlackComponent(text).trim();
+
+	let inReplyToId: string | undefined;
+	if (typeof message.thread_ts === 'string' && message.thread_ts !== message.ts) {
+		const target = await findMastodonReplyTarget(threadMessages, message.ts);
+		if (target !== null) {
+			inReplyToId = target;
+		}
+	}
+
+	try {
+		const data = await postMastodon(text, images, inReplyToId);
+		logInfo(`Posted Mastodon status ${data.id} for Slack message ${message.ts}`);
+
+		await MastodonPosts.doc(message.ts).set({
+			statusId: data.id,
+			url: data.url,
+			channel: event.item.channel,
+			threadTs: message.thread_ts ?? null,
+			postedAt: Timestamp.now(),
+		});
+	} catch (error) {
+		logError(`Failed to post Mastodon status: ${error}`);
+	}
+};
+
 eventAdapter.on('reaction_added', async (event: ReactionAddedEvent) => {
 	if (event.item.type === 'message') {
 		await letterpackBomb(event);
+		await slackMastodonTunnel(event);
 	}
 });
 
@@ -120,6 +264,41 @@ eventAdapter.on('message', async (message: Message) => {
 					ts: message.ts,
 				})),
 			});
+	}
+});
+
+// Rinna temperature signal
+eventAdapter.on('message', async (message: Message) => {
+	if (message.text === 'うなの体温') {
+		await pubsubClient
+			.topic('hakatabot')
+			.publishMessage({
+				data: Buffer.from(JSON.stringify({
+					type: 'rinna-temperature',
+					ts: message.ts,
+					channel: message.channel,
+				})),
+			});
+	}
+});
+
+// Minecraft chat bridge: relay #_minecraft-log messages to the Minecraft server via HakataMatrix app controller.
+// Published to a dedicated topic (not `hakatabot`) so that rinna-signal subscribers never receive them.
+eventAdapter.on('message', async (message: Message) => {
+	if (message.channel !== MINECRAFT_LOG_CHANNEL_ID) {
+		return;
+	}
+	try {
+		await pubsubClient
+			.topic('slack-minecraft')
+			.publishMessage({
+				data: Buffer.from(JSON.stringify({
+					type: 'slack-minecraft-message',
+					message,
+				})),
+			});
+	} catch (error) {
+		logError('Failed to publish Minecraft chat bridge message', error);
 	}
 });
 
@@ -212,6 +391,8 @@ eventAdapter.on('message', async (message: Message) => {
 		return;
 	}
 
+	const normalizedText = (message.text ?? '').normalize('NFKC');
+
 	await db.runTransaction(async (transaction) => {
 		const state = await transaction.get(States.doc('slack-rinna-signal'));
 		const recentBotMessages = (state.get('recentBotMessages') as Message[]) ?? [];
@@ -225,7 +406,7 @@ eventAdapter.on('message', async (message: Message) => {
 			message.user !== 'USLACKBOT' &&
 			message.user !== TSGBOT_ID
 		) {
-			if (message.text === '@りんな optout') {
+			if (normalizedText === '@りんな optout') {
 				optoutUsers.push(message.user);
 				transaction.set(state.ref, {
 					optoutUsers: Array.from(new Set(optoutUsers)),
@@ -238,7 +419,7 @@ eventAdapter.on('message', async (message: Message) => {
 				return;
 			}
 
-			if (message.text === '@りんな optin') {
+			if (normalizedText === '@りんな optin') {
 				transaction.set(state.ref, {
 					optoutUsers: optoutUsers.filter((user) => user !== message.user),
 				}, {merge: true});
@@ -281,7 +462,7 @@ eventAdapter.on('message', async (message: Message) => {
 			typeof message.bot_id === 'string' ||
 			message.user === 'USLACKBOT' ||
 			message.user === TSGBOT_ID ||
-			isRinnaSignalBlockList(message.text ?? '')
+			isRinnaSignalBlockList(normalizedText)
 		) {
 			recentBotMessages.push(message);
 		} else {
@@ -295,7 +476,7 @@ eventAdapter.on('message', async (message: Message) => {
 		if (
 			(
 				isTrueHumanMessage &&
-				matchRinnaSignalText(message.text ?? '')
+				matchRinnaSignalText(normalizedText)
 			) ||
 			(
 				newHumanMessages.length >= 5 &&
@@ -305,7 +486,7 @@ eventAdapter.on('message', async (message: Message) => {
 				Math.random() < 0.3
 			)
 		) {
-			logger.log(`rinna-signal: Signal triggered on ${ts} (lastSignal = ${lastSignal})`);
+			logInfo(`rinna-signal: Signal triggered on ${ts} (lastSignal = ${lastSignal})`);
 
 			await pubsubClient
 				.topic('hakatabot')
@@ -375,11 +556,10 @@ eventAdapter.on('message', async (message: Message) => {
 
 	const inputDialog = doc.get('inputDialog') as string ?? '';
 	const outputSpeech = doc.get('outputSpeech') as string ?? '';
-	const output = doc.get('output') as string ?? '';
 	const character = doc.get('character') as string ?? '';
 	const moderations = resultDocs.map((resultDoc) => resultDoc.get('moderations') as Moderations ?? {});
+	const config = doc.get('config') as Record<string, unknown> ?? {};
 
-	const tailText = output.split('」').slice(1).join('」');
 	let text = stripIndents`
 		Input:
 		\`\`\`
@@ -388,10 +568,6 @@ eventAdapter.on('message', async (message: Message) => {
 		Result:
 		\`\`\`
 		${character}「${outputSpeech.trim()}」
-		\`\`\`
-		Continuation Text:
-		\`\`\`
-		${tailText.trim()}
 		\`\`\`
 	`;
 
@@ -421,6 +597,10 @@ eventAdapter.on('message', async (message: Message) => {
 		}
 	}
 
+	if (typeof config.thinking_text === 'string') {
+		text += `\nThinking Text:\n\`\`\`\n${config.thinking_text}\n\`\`\``;
+	}
+
 	await slack.chat.postMessage({
 		channel: message.channel,
 		thread_ts: message.thread_ts,
@@ -443,13 +623,13 @@ eventAdapter.on('message', async (message: Message) => {
 	}
 
 	const tokens = message.text.split(' ');
-	// eslint-disable-next-line prefer-destructuring
+
 	const operation = tokens[1];
 	const user = tokens.slice(2).join(' ');
 
 	const state = new State('sleep-battle-cron-job');
 	let optoutUsers = await state.get('optoutUsers', [] as string[]);
-	const slackUsers = await state.get('slackUsers', Object.create(null) as {[slackId: string]: string});
+	const slackUsers = await state.get('slackUsers', Object.create(null) as Record<string, string>);
 	if (operation === 'optin') {
 		optoutUsers = optoutUsers.filter((u) => u !== user);
 	} else if (operation === 'optout') {
@@ -480,6 +660,95 @@ eventAdapter.on('message', async (message: Message) => {
 	});
 });
 
+const parseITQuizAnnouncement = (text: string): { hour: number; minute: number; isToday: boolean } | null => {
+	if (!text.includes('ITクイズ') || !text.includes('やります')) {
+		return null;
+	}
+
+	const todayMatch = text.match(/今日(?<hour>\d+)時(?:(?<minute>\d+)分)?から/);
+	if (todayMatch?.groups) {
+		const hour = parseInt(todayMatch.groups.hour);
+		const minute = todayMatch.groups.minute ? parseInt(todayMatch.groups.minute) : 0;
+		return {hour, minute, isToday: true};
+	}
+
+	const tomorrowMatch = text.match(/明日(?<hour>\d+)時(?:(?<minute>\d+)分)?から/);
+	if (tomorrowMatch?.groups) {
+		const hour = parseInt(tomorrowMatch.groups.hour);
+		const minute = tomorrowMatch.groups.minute ? parseInt(tomorrowMatch.groups.minute) : 0;
+		return {hour, minute, isToday: false};
+	}
+
+	return null;
+};
+
+const addITQuizToCalendar = async (hour: number, minute: number, isToday: boolean): Promise<void> => {
+	try {
+		const auth = await getGoogleAuth();
+		const calendar = google.calendar({version: 'v3', auth});
+
+		let eventDate = dayjs().tz('Asia/Tokyo');
+		if (!isToday) {
+			eventDate = eventDate.add(1, 'day');
+		}
+		eventDate = eventDate.hour(hour).minute(minute).second(0).millisecond(0);
+
+		const endTime = eventDate.add(1, 'hour');
+
+		await calendar.events.insert({
+			calendarId: TSG_EVENTS_CALENDAR_ID,
+			requestBody: {
+				summary: 'ITクイズ',
+				description: '博多市が作成したITに関する早押しクイズ30問を、クイズアプリ上で一気に出題します！\n\n出題範囲は「インターネット」「プログラミング」「情報科学」「ソフトウェア」「ハードウェア」「IT企業」などITに少しでも関係ある様々な分野から、そして専門的な内容から一般的な知識まで幅広く出題されます。\n\n時間になると、クイズイベントへの参加リンクがDiscordやSlackの#sig-quizチャンネルなどに投稿されます。\n参加するためには「みんなで早押しクイズ」アプリのインストールが必要になるので、事前に準備しておいてください！',
+				location: IT_QUIZ_DISCORD_EVENT_URL.value(),
+				start: {
+					dateTime: eventDate.toISOString(),
+					timeZone: 'Asia/Tokyo',
+				},
+				end: {
+					dateTime: endTime.toISOString(),
+					timeZone: 'Asia/Tokyo',
+				},
+			},
+		});
+
+		logInfo(`ITクイズの予定を追加しました: ${eventDate.toISOString()}`);
+	} catch (error) {
+		logInfo(`ITクイズの予定追加に失敗しました: ${error}`);
+		throw error;
+	}
+};
+
+eventAdapter.on('message', async (message: Message) => {
+	if (
+		message.channel === SIG_QUIZ_CHANNEL_ID &&
+		message.user === HAKATASHI_ID &&
+		message.subtype !== 'bot_message' &&
+		typeof message.bot_id !== 'string' &&
+		!message.hidden &&
+		message.text
+	) {
+		const quizInfo = parseITQuizAnnouncement(message.text);
+		if (quizInfo) {
+			try {
+				await addITQuizToCalendar(quizInfo.hour, quizInfo.minute, quizInfo.isToday);
+
+				await slack.reactions.add({
+					channel: message.channel,
+					timestamp: message.ts,
+					name: 'calendar',
+				});
+			} catch {
+				await slack.reactions.add({
+					channel: message.channel,
+					timestamp: message.ts,
+					name: 'x',
+				});
+			}
+		}
+	}
+});
+
 // What's wrong?
 eventAdapter.constructor.prototype.emit = async function (eventName: string, event: any, respond: () => void) {
 	for (const listener of this.listeners(eventName) as ((ev: any) => Promise<any>)[]) {
@@ -488,5 +757,21 @@ eventAdapter.constructor.prototype.emit = async function (eventName: string, eve
 	respond();
 };
 
-export const slackEvent = https.onRequest(eventAdapter.requestListener());
+const requestListener = eventAdapter.requestListener();
+
+export const slackEvent = onRequest(
+	{
+		memory: '512MiB',
+	},
+	(request, response) => {
+		if (request.headers['x-slack-retry-num']) {
+			logInfo(`Ignoring Slack retry message: ${request.headers['x-slack-retry-num']}`);
+			response.status(202).send('OK');
+			return;
+		}
+
+		requestListener(request, response);
+	},
+);
+
 export {slack as webClient};

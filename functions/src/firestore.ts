@@ -1,4 +1,4 @@
-import type {DocumentReference, CollectionReference} from '@google-cloud/firestore';
+import type {DocumentReference, CollectionReference, Timestamp} from '@google-cloud/firestore';
 import firebase from 'firebase-admin';
 
 firebase.initializeApp();
@@ -9,15 +9,43 @@ export interface ItQuizProgressStat {
 	ideas: number,
 }
 
+export interface ItQuizVideoEngagement {
+	volume: string,
+	engagements: {
+		impressions: number,
+		likes: number,
+		comments: number,
+	},
+}
+
+export interface ItQuizVideoEngagementStats {
+	date: string,
+	tiktok: ItQuizVideoEngagement[],
+	youtube: ItQuizVideoEngagement[],
+	instagram: ItQuizVideoEngagement[],
+}
+
+export interface MastodonPost {
+	statusId: string,
+	url: string,
+	channel: string,
+	threadTs: string | null,
+	postedAt: Date | Timestamp,
+}
+
 export const db = firebase.firestore();
 export const GoogleTokens = db.collection('google-tokens');
 export const GoogleFoodPhotos = db.collection('google-food-photos');
 export const FitbitTokens = db.collection('fitbit-tokens');
+export const TikTokTokens = db.collection('tiktok-tokens');
 export const FitbitActivities = db.collection('fitbit-activities');
 export const FitbitSleeps = db.collection('fitbit-sleeps');
 export const AnimeWatchRecords = db.collection('anime-watch-records');
 export const ItQuizProgressStats = db.collection('it-quiz-progress-stats') as CollectionReference<ItQuizProgressStat>;
 export const States = db.collection('states');
+export const SteamFriends = db.collection('steam-friends');
+export const ItQuizVideoEngagements = db.collection('it-quiz-video-engagements') as CollectionReference<ItQuizVideoEngagementStats>;
+export const MastodonPosts = db.collection('mastodon-posts') as CollectionReference<MastodonPost>;
 
 export class State {
 	doc: DocumentReference;
@@ -26,7 +54,7 @@ export class State {
 		this.doc = States.doc(name);
 	}
 
-	set(value: {[name: string]: any}) {
+	set(value: Record<string, any>) {
 		return this.doc.set(value, {merge: true});
 	}
 

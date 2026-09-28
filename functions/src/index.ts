@@ -1,9 +1,10 @@
-import assert from 'assert';
-import {https} from 'firebase-functions';
+import assert from 'node:assert';
+import {onRequest} from 'firebase-functions/v2/https';
 import {google} from 'googleapis';
-import {GoogleTokens, FitbitTokens, AnimeWatchRecords} from './firestore.js';
+import {GoogleTokens, FitbitTokens, TikTokTokens, AnimeWatchRecords} from './firestore.js';
 import {client as fitbitClient} from './fitbit.js';
 import {oauth2Client} from './google.js';
+import {getTikTokAuthUrl, getTikTokAccessToken, TikTokStoredToken} from './tiktok.js';
 
 export {slackEvent} from './slack.js';
 export * from './crons/index.js';
@@ -11,7 +12,7 @@ export * from './api/index.js';
 
 const oauth2 = google.oauth2('v2');
 
-export const authenticateGoogleApi = https.onRequest((request, response) => {
+export const authenticateGoogleApi = onRequest({memory: '512MiB'}, (request, response) => {
 	const url = oauth2Client.generateAuthUrl({
 		access_type: 'offline',
 		scope: [
@@ -20,12 +21,13 @@ export const authenticateGoogleApi = https.onRequest((request, response) => {
 			'https://www.googleapis.com/auth/userinfo.profile',
 			'https://www.googleapis.com/auth/youtube.readonly',
 			'https://www.googleapis.com/auth/spreadsheets.readonly',
+			'https://www.googleapis.com/auth/calendar',
 		],
 	});
 	response.redirect(url);
 });
 
-export const googleApiOauthCallback = https.onRequest(async (request, response) => {
+export const googleApiOauthCallback = onRequest({memory: '512MiB'}, async (request, response) => {
 	const code = request.query?.code;
 	if (!code || typeof code !== 'string') {
 		response.sendStatus(400).end();
@@ -46,7 +48,7 @@ export const googleApiOauthCallback = https.onRequest(async (request, response) 
 	response.send('ok');
 });
 
-export const authenticateFitbitApi = https.onRequest((request, response) => {
+export const authenticateFitbitApi = onRequest({memory: '512MiB'}, (request, response) => {
 	let scopes = request.query?.scopes;
 
 	if (scopes === undefined) {
@@ -66,7 +68,7 @@ export const authenticateFitbitApi = https.onRequest((request, response) => {
 	response.redirect(authorizationUri);
 });
 
-export const fitbitApiOauthCallback = https.onRequest(async (request, response) => {
+export const fitbitApiOauthCallback = onRequest({memory: '512MiB'}, async (request, response) => {
 	const code = request.query?.code;
 	if (!code || typeof code !== 'string') {
 		response.sendStatus(400).end();
@@ -84,7 +86,61 @@ export const fitbitApiOauthCallback = https.onRequest(async (request, response) 
 	response.send('ok');
 });
 
-export const recordAnimeWatchRecord = https.onRequest(async (request, response) => {
+export const authenticateTikTokApi = onRequest({memory: '512MiB'}, (request, response) => {
+	let scopes = request.query?.scopes;
+
+	if (scopes === undefined) {
+		scopes = ['user.info.stats', 'video.list', 'video.publish'];
+	} else if (typeof scopes === 'string') {
+		scopes = scopes.split(',');
+	} else if (!Array.isArray(scopes)) {
+		response.sendStatus(400).end();
+		return;
+	}
+
+	const redirectUri = 'https://us-central1-hakatabot-firebase-functions.cloudfunctions.net/tiktokApiOauthCallback';
+	const authorizationUri = getTikTokAuthUrl(redirectUri, scopes.map((scope) => scope.toString()));
+
+	response.redirect(authorizationUri);
+});
+
+export const tiktokApiOauthCallback = onRequest({memory: '512MiB'}, async (request, response) => {
+	try {
+		const code = request.query?.code;
+		const error = request.query?.error;
+
+		if (error) {
+			response.status(400).send(`TikTok OAuth error: ${error}`);
+			return;
+		}
+
+		if (!code || typeof code !== 'string') {
+			response.sendStatus(400).end();
+			return;
+		}
+
+		const redirectUri = 'https://us-central1-hakatabot-firebase-functions.cloudfunctions.net/tiktokApiOauthCallback';
+		const tokenResponse = await getTikTokAccessToken(code, redirectUri);
+
+		// Calculate expiration date
+		const expiresAt = new Date(Date.now() + tokenResponse.expires_in * 1000);
+
+		const storedToken: TikTokStoredToken = {
+			...tokenResponse,
+			expires_at: expiresAt,
+		};
+
+		// Use open_id as the document ID for TikTok tokens
+		await TikTokTokens.doc(tokenResponse.open_id).set(storedToken, {merge: true});
+
+		response.send('ok');
+	} catch (error) {
+		console.error('TikTok OAuth callback error:', error);
+		response.status(500).send('Failed to process TikTok OAuth callback');
+	}
+});
+
+export const recordAnimeWatchRecord = onRequest({memory: '512MiB'}, async (request, response) => {
 	if (!request.body || typeof request.body !== 'object') {
 		response.sendStatus(400).end();
 		return;

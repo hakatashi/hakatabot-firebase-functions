@@ -1,14 +1,16 @@
-import assert from 'assert';
+import assert from 'node:assert';
 import {KnownBlock} from '@slack/web-api';
 import type {CollectionReference, DocumentData} from 'firebase-admin/firestore';
-import {logger, pubsub, config as getConfig} from 'firebase-functions';
+import {info as logInfo} from 'firebase-functions/logger';
+import {defineString} from 'firebase-functions/params';
+import {onSchedule} from 'firebase-functions/v2/scheduler';
 import chunk from 'lodash/chunk.js';
 import groupBy from 'lodash/groupBy.js';
 import scrapeIt from 'scrape-it';
 import {States, db} from '../firestore.js';
 import {webClient as slack} from '../slack.js';
 
-const config = getConfig();
+const SLACK_CHANNELS_GENSHIN = defineString('SLACK_CHANNELS_GENSHIN');
 
 const normalizeHtml = (html: string | null) => (
 	(html ?? '').replaceAll(/<(?:br|hr)>/g, '\n')
@@ -44,7 +46,7 @@ const getGameWithSerialCodeSelector = (url: string) => {
 };
 
 const getGameWithSerialCodes = async (url: string) => {
-	logger.info(`getGameWithSerialCodes: ${url}`);
+	logInfo(`getGameWithSerialCodes: ${url}`);
 
 	assert(url.startsWith('https://gamewith.jp/'));
 
@@ -66,7 +68,7 @@ const getGameWithSerialCodes = async (url: string) => {
 		},
 	});
 
-	logger.info(`getGameWithSerialCodes: Retrieved ${data.serialCodes.length} serial codes from ${url}`);
+	logInfo(`getGameWithSerialCodes: Retrieved ${data.serialCodes.length} serial codes from ${url}`);
 
 	return data.serialCodes.map(({code, description}) => ({code, description, source: url}));
 };
@@ -82,7 +84,7 @@ interface Game8ScrapedData {
 }
 
 const getGame8SerialCodes = async (url: string) => {
-	logger.info(`getGame8SerialCodes: ${url}`);
+	logInfo(`getGame8SerialCodes: ${url}`);
 
 	assert(url.startsWith('https://game8.jp/'));
 
@@ -166,7 +168,7 @@ const getGame8SerialCodes = async (url: string) => {
 		}
 	}
 
-	logger.info(`getGame8SerialCodes: Retrieved ${serialCodes.length} serial codes from ${url}`);
+	logInfo(`getGame8SerialCodes: Retrieved ${serialCodes.length} serial codes from ${url}`);
 
 	return serialCodes;
 };
@@ -183,7 +185,7 @@ interface AltemaScrapedData {
 }
 
 const getAltemaSerialCodes = async (url: string) => {
-	logger.info(`getAltemaSerialCodes: ${url}`);
+	logInfo(`getAltemaSerialCodes: ${url}`);
 
 	assert(url.startsWith('https://altema.jp/'));
 
@@ -249,20 +251,18 @@ const getAltemaSerialCodes = async (url: string) => {
 		}
 	}
 
-	logger.info(`getAltemaSerialCodes: Retrieved ${serialCodes.length} serial codes from ${url}`);
+	logInfo(`getAltemaSerialCodes: Retrieved ${serialCodes.length} serial codes from ${url}`);
 
 	return serialCodes;
 };
 
 interface GenshinSerialCodesState extends DocumentData {
-	serialCodes: {
-		[code: string]: {
+	serialCodes: Record<string, {
 			game: string,
 			description: string,
 			source: string,
 			createdAt: number,
-		},
-	},
+		}>,
 }
 
 const getMarkupedSerialCode = (game: string, code: string) => {
@@ -278,8 +278,11 @@ const getMarkupedSerialCode = (game: string, code: string) => {
 	return code;
 };
 
-export const postGenshinSerialCodesCronJob = pubsub.schedule('every 20 minutes').onRun(async () => {
-	logger.info('postGenshinSerialCodesCronJob: started');
+export const postGenshinSerialCodesCronJob = onSchedule({
+	schedule: 'every 2 hours',
+	memory: '512MiB',
+}, async () => {
+	logInfo('postGenshinSerialCodesCronJob: started');
 
 	const now = Date.now();
 
@@ -359,8 +362,8 @@ export const postGenshinSerialCodesCronJob = pubsub.schedule('every 20 minutes')
 		return {isFirstRun};
 	});
 
-	logger.info(`postGenshinSerialCodesCronJob: Found ${newSerialCodes.length} new serial codes`);
-	logger.info(`postGenshinSerialCodesCronJob: isFirstRun = ${result.isFirstRun}`);
+	logInfo(`postGenshinSerialCodesCronJob: Found ${newSerialCodes.length} new serial codes`);
+	logInfo(`postGenshinSerialCodesCronJob: isFirstRun = ${result.isFirstRun}`);
 
 	if (!result.isFirstRun && newSerialCodes.length > 0) {
 		const serialCodesByGame = groupBy(newSerialCodes, 'game');
@@ -404,7 +407,7 @@ export const postGenshinSerialCodesCronJob = pubsub.schedule('every 20 minutes')
 
 		for (const blocksChunk of chunk(blocks, 50)) {
 			await slack.chat.postMessage({
-				channel: config.slack.channels.genshin,
+				channel: SLACK_CHANNELS_GENSHIN.value(),
 				text: '新しいシリアルコードを見つけてきたぜ～！',
 				icon_url: 'https://pbs.twimg.com/media/Eh8ugAaU4AEe0qd?format=png&name=small',
 				username: 'パイモン',
