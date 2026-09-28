@@ -65,9 +65,9 @@ export const getLatestYouTubeVideoEngagements = async (channelId: string): Promi
 		}
 		const volume = volumeMatch.groups.volume;
 
-		const impressions = Number.parseInt(video.statistics?.viewCount || '0');
-		const likes = Number.parseInt(video.statistics?.likeCount || '0');
-		const comments = Number.parseInt(video.statistics?.commentCount || '0');
+		const impressions = Number.parseInt(video.statistics?.viewCount || '0', 10);
+		const likes = Number.parseInt(video.statistics?.likeCount || '0', 10);
+		const comments = Number.parseInt(video.statistics?.commentCount || '0', 10);
 
 		const existing = engagementByVolume.get(volume) || {impressions: 0, likes: 0, comments: 0};
 		engagementByVolume.set(volume, {
@@ -78,6 +78,6 @@ export const getLatestYouTubeVideoEngagements = async (channelId: string): Promi
 	}
 	// Convert to array and sort by volume number (newest first - highest number first)
 	return Array.from(engagementByVolume.entries())
-		.sort(([a], [b]) => Number.parseInt(b) - Number.parseInt(a))
+		.sort(([a], [b]) => Number.parseInt(b, 10) - Number.parseInt(a, 10))
 		.map(([volume, engagements]) => ({volume, engagements}));
 };

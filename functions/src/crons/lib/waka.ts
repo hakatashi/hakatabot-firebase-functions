@@ -84,5 +84,5 @@ export const getWaka = async () => {
 	return `${waka.text}──${waka.author}\u3000『${pages[page]}』${title.replace(
 		/(?:[歌\s一二三四五六七八九]|（.+?）)/g,
 		'',
-	)}・${parseInt(waka.number)}`;
+	)}・${parseInt(waka.number, 10)}`;
 };

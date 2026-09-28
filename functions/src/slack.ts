@@ -667,15 +667,15 @@ const parseITQuizAnnouncement = (text: string): { hour: number; minute: number; 
 
 	const todayMatch = text.match(/今日(?<hour>\d+)時(?:(?<minute>\d+)分)?から/);
 	if (todayMatch?.groups) {
-		const hour = parseInt(todayMatch.groups.hour);
-		const minute = todayMatch.groups.minute ? parseInt(todayMatch.groups.minute) : 0;
+		const hour = parseInt(todayMatch.groups.hour, 10);
+		const minute = todayMatch.groups.minute ? parseInt(todayMatch.groups.minute, 10) : 0;
 		return {hour, minute, isToday: true};
 	}
 
 	const tomorrowMatch = text.match(/明日(?<hour>\d+)時(?:(?<minute>\d+)分)?から/);
 	if (tomorrowMatch?.groups) {
-		const hour = parseInt(tomorrowMatch.groups.hour);
-		const minute = tomorrowMatch.groups.minute ? parseInt(tomorrowMatch.groups.minute) : 0;
+		const hour = parseInt(tomorrowMatch.groups.hour, 10);
+		const minute = tomorrowMatch.groups.minute ? parseInt(tomorrowMatch.groups.minute, 10) : 0;
 		return {hour, minute, isToday: false};
 	}
 

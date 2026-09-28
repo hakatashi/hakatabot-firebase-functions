@@ -1,5 +1,3 @@
-/* eslint-env jest */
-
 import {parseBlueskyUrls} from './social.js';
 
 describe('parseBlueskyUrls', () => {
