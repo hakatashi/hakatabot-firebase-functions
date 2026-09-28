@@ -15,7 +15,7 @@ import {onRequest} from 'firebase-functions/v2/https';
 import {google} from 'googleapis';
 import range from 'lodash/range.js';
 import shuffle from 'lodash/shuffle.js';
-import {HAKATASHI_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID, TSGBOT_ID, SIG_QUIZ_CHANNEL_ID, TSG_EVENTS_CALENDAR_ID} from './const.js';
+import {HAKATASHI_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID, TSGBOT_ID, SIG_QUIZ_CHANNEL_ID, TSG_EVENTS_CALENDAR_ID, MINECRAFT_LOG_CHANNEL_ID} from './const.js';
 import {postMastodon} from './crons/lib/social.js';
 import {db, MastodonPosts, State, States} from './firestore.js';
 import {getGoogleAuth} from './google.js';
@@ -279,6 +279,26 @@ eventAdapter.on('message', async (message: Message) => {
 					channel: message.channel,
 				})),
 			});
+	}
+});
+
+// Minecraft chat bridge: relay #_minecraft-log messages to the Minecraft server via HakataMatrix app controller.
+// Published to a dedicated topic (not `hakatabot`) so that rinna-signal subscribers never receive them.
+eventAdapter.on('message', async (message: Message) => {
+	if (message.channel !== MINECRAFT_LOG_CHANNEL_ID) {
+		return;
+	}
+	try {
+		await pubsubClient
+			.topic('slack-minecraft')
+			.publishMessage({
+				data: Buffer.from(JSON.stringify({
+					type: 'slack-minecraft-message',
+					message,
+				})),
+			});
+	} catch (error) {
+		logError('Failed to publish Minecraft chat bridge message', error);
 	}
 });
 

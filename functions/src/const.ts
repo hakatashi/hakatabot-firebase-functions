@@ -14,3 +14,4 @@ export const IT_QUIZ_GOOGLE_SHEET_ID = '1OjcWGGyEdqYBYXSSeF3iOXqHXJJdvcCpfjL22e2
 export const IT_QUIZ_YOUTUBE_CHANNEL_ID = 'UCmGXjoj98-4jDsR3ebWMP7A';
 export const SIG_QUIZ_CHANNEL_ID = 'C02DCA8D0DT';
 export const TSG_EVENTS_CALENDAR_ID = 'hl5mthjments725aadepplvcvs@group.calendar.google.com';
+export const MINECRAFT_LOG_CHANNEL_ID = 'C0C4BN2SUHF';
