@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
-    "module": "ESNext",
+    "module": "NodeNext",
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "outDir": "functions/lib",
+    "rootDir": "functions/src",
     "sourceMap": true,
     "strict": true,
     "target": "ESNext",
@@ -13,7 +14,13 @@
       "./functions/types",
       "./node_modules/@types"
     ],
-    "moduleResolution": "node"
+    "types": [
+      "node",
+      "jest",
+      "emoji-data",
+      "unicode__unicode-14.0.0"
+    ],
+    "moduleResolution": "NodeNext"
   },
   "compileOnSave": true,
   "include": [
