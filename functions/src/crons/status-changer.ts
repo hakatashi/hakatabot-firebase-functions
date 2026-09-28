@@ -1,4 +1,4 @@
-import unicodeNames from '@unicode/unicode-14.0.0/Names/index.js';
+import unicodeNames from '@unicode/unicode-14.0.0/Names/index.mjs';
 import download from 'download';
 import emojiData from 'emoji-data';
 import {info as logInfo} from 'firebase-functions/logger';
