@@ -12,3 +12,6 @@ updates:
       - dependency-name: "chart.js"
       - dependency-name: "@types/chart.js"
       - dependency-name: "cheerio"
+      # v2 dropped the username/password login used in crons/lib/social.ts (#524)
+      - dependency-name: "@threadsjs/threads.js"
+        update-types: ["version-update:semver-major"]
