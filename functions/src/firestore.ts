@@ -1,7 +1,8 @@
 import type {DocumentReference, CollectionReference, Timestamp} from '@google-cloud/firestore';
-import firebase from 'firebase-admin';
+import {initializeApp} from 'firebase-admin/app';
+import {getFirestore} from 'firebase-admin/firestore';
 
-firebase.initializeApp();
+initializeApp();
 
 export interface ItQuizProgressStat {
 	date: string,
@@ -33,7 +34,7 @@ export interface MastodonPost {
 	postedAt: Date | Timestamp,
 }
 
-export const db = firebase.firestore();
+export const db = getFirestore();
 export const GoogleTokens = db.collection('google-tokens');
 export const GoogleFoodPhotos = db.collection('google-food-photos');
 export const FitbitTokens = db.collection('fitbit-tokens');
