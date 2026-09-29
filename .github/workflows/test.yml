@@ -69,9 +69,9 @@ jobs:
           npm ci --prefix functions
       - name: Restore .env file from secrets
         run: echo "${{secrets.FUNCTIONS_DOTENV}}" > functions/.env
+      # Run firebase-tools on the runner's Node.js 22 instead of w9jds/firebase-action,
+      # whose container ships Node.js 20.15 and cannot require() ESM-only deps (jose via firebase-admin 14)
       - name: Deploy to Firebase
-        uses: w9jds/firebase-action@v13.15.4
-        with:
-          args: deploy
+        run: npx --yes firebase-tools@13.15.4 deploy --non-interactive
         env:
           FIREBASE_TOKEN: ${{secrets.FIREBASE_TOKEN}}
