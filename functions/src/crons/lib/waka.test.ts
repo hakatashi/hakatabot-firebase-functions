@@ -13,7 +13,7 @@ const download = rawDownload as jest.MockedFunction<typeof rawDownload>;
 const {default: rawSample} = await import('lodash/sample.js');
 const sample = rawSample as jest.MockedFunction<typeof rawSample>;
 
-const {getWaka} = await import('./waka');
+const {getWaka} = await import('./waka.js');
 
 describe('getWaka', () => {
 	beforeEach(() => {
