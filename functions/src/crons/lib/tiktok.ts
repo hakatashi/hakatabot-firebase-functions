@@ -75,7 +75,7 @@ export const getLatestTikTokVideoEngagements = async (): Promise<{volume: string
 		}
 		// Convert to array and sort by volume number (newest first - highest number first)
 		return Array.from(engagementByVolume.entries())
-			.sort(([a], [b]) => Number.parseInt(b) - Number.parseInt(a))
+			.sort(([a], [b]) => Number.parseInt(b, 10) - Number.parseInt(a, 10))
 			.map(([volume, engagements]) => ({volume, engagements}));
 	} catch (error) {
 		if (isAxiosError(error)) {

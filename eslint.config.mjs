@@ -1,9 +1,12 @@
+import {fixupConfigRules} from '@eslint/compat';
 import hakatashi from '@hakatashi/eslint-config/typescript.js';
 import canonical from 'eslint-plugin-canonical';
 import globals from 'globals';
 
+// Some plugins bundled with @hakatashi/eslint-config (e.g. eslint-plugin-react)
+// still use context APIs removed in ESLint 10, so polyfill them via @eslint/compat.
 export default [
-	...hakatashi,
+	...fixupConfigRules(hakatashi),
 	{
 		languageOptions: {
 			globals: {

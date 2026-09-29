@@ -103,7 +103,7 @@ export const getLatestInstagramVideoEngagements = async (accessToken: string): P
 		}
 		// Convert to array and sort by volume number (newest first - highest number first)
 		return Array.from(engagementByVolume.entries())
-			.sort(([a], [b]) => Number.parseInt(b) - Number.parseInt(a))
+			.sort(([a], [b]) => Number.parseInt(b, 10) - Number.parseInt(a, 10))
 			.map(([volume, engagements]) => ({volume, engagements}));
 	} catch (error) {
 		throw new Error(`Failed to fetch Instagram video engagements: ${error instanceof Error ? error.message : 'Unknown error'}`);

@@ -41,8 +41,8 @@ const getItQuizStats = async () => {
 		});
 	});
 
-	const done = parseInt(doneStr);
-	const ideas = parseInt(ideasStr);
+	const done = parseInt(doneStr, 10);
+	const ideas = parseInt(ideasStr, 10);
 
 	return {done, ideas};
 };
@@ -200,7 +200,7 @@ const getItQuizVideoEngagementsImageUrl = async (timestamp: Dayjs) => {
 	}
 
 	const latestVideoVolumes = Array.from(videoVolumes).sort((a, b) => (
-		Number.parseInt(a) - Number.parseInt(b)
+		Number.parseInt(a, 10) - Number.parseInt(b, 10)
 	)).slice(-7);
 
 	const videoEngagementStats: {volume: string, tiktok: number[], youtube: number[], instagram: number[]}[] = [];
