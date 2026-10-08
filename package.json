@@ -13,7 +13,7 @@
     "@types/oauth": "^0.9.6",
     "@types/simple-oauth2": "^5.0.8",
     "@typescript-eslint/eslint-plugin": "^8.70.1",
-    "@typescript-eslint/parser": "^8.70.1",
+    "@typescript-eslint/parser": "^8.71.1",
     "eslint": "^10.12.0",
     "eslint-import-resolver-typescript": "^4.4.5",
     "eslint-plugin-canonical": "^5.1.3",
