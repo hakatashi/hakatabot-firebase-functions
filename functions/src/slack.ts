@@ -16,6 +16,7 @@ import {google} from 'googleapis';
 import range from 'lodash/range.js';
 import shuffle from 'lodash/shuffle.js';
 import {HAKATASHI_ID, SANDBOX_ID, TSG_SLACKBOT_ID, RANDOM_ID, TSGBOT_ID, SIG_QUIZ_CHANNEL_ID, TSG_EVENTS_CALENDAR_ID, MINECRAFT_LOG_CHANNEL_ID} from './const.js';
+import {convertSlackEmoji} from './crons/lib/slack-emoji.js';
 import {postMastodon} from './crons/lib/social.js';
 import {db, MastodonPosts, State, States} from './firestore.js';
 import {getGoogleAuth} from './google.js';
@@ -213,7 +214,7 @@ const slackMastodonTunnel = async (event: ReactionAddedEvent) => {
 		}
 		return info;
 	});
-	text = unescapeSlackComponent(text).trim();
+	text = convertSlackEmoji(unescapeSlackComponent(text)).trim();
 
 	let inReplyToId: string | undefined;
 	if (typeof message.thread_ts === 'string' && message.thread_ts !== message.ts) {
